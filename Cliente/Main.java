@@ -1,8 +1,10 @@
 package Proyecto2.Cliente;
 
+import Proyecto2.Codes;
+
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.*;
 
 public class Main {
@@ -17,7 +19,7 @@ public class Main {
         Socket socket = new Socket("localhost", 1235);
 
         // Configurar stream de salida para enviar datos al servidor
-        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+        DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
         // Configurar stream de entrada para recibir datos del servidor
         BufferedReader in = new BufferedReader(
@@ -27,6 +29,9 @@ public class Main {
         broad_sock.receive(packet);
         String received = new String(packet.getData(), 0, packet.getLength());
         System.out.println("Mensaje recibido: " + received);
+
+        byte[] data = {Codes.NEW_DOC, 'h', 'o', 'l', 'a'}; // El primer byte es el código de la operación, el resto es el mensaje
+        out.write(data);
 
         // Cerrar el socket
         socket.close();

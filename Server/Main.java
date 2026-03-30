@@ -11,6 +11,6 @@ public class Main
     public static void main(String[] args)
     {
         ConnectionManager manager = new ConnectionManager( 1235);
-        new Thread(manager).start();
+        manager.manageConnections();
     }
 }
