@@ -6,14 +6,14 @@ public class BroadcastConn implements AutoCloseable {
     private DatagramSocket socket = null;
     private int port = 0;
     private Inet4Address broadcastAddress = null;
-    public BroadcastConn(int port)
+    public BroadcastConn(String ip, int port)
     {
         try
         {
             socket = new DatagramSocket();
             this.port = port;
             socket.setBroadcast(true);
-            broadcastAddress = (Inet4Address) InetAddress.getByName("localhost");
+            broadcastAddress = (Inet4Address) InetAddress.getByName(ip);
         }
         catch (SocketException e)
         {

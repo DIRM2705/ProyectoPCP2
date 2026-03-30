@@ -6,4 +6,7 @@ public class Codes
     public static final int OPEN_DOC = 1;
     public static final int CLOSE_DOC = 2;
     public static final int DELETE_DOC = 3;
+    public static final int UPDATE_DOC = 4;
+    public static final int ERROR = 5;
+    public static final int NEW_CLIENT = 6;
 }

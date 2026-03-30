@@ -1,86 +1,76 @@
 package Proyecto2.Server;
 
 import Proyecto2.Codes;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.Socket;
 import java.util.ArrayList;
+
+import static Proyecto2.Server.Main.broadcastMessaging;
 
 public class Handler
 {
-    private TablaDocs tablaDocs;
-    private BroadcastConn broadcastMessaging;
-    public Handler()
+    private final TablaDocs tablaDocs;
+    private final Socket client;
+    private final BufferedReader reader;
+    private final int origen; //El número de cliente que envió el mensaje, se asigna a partir de la dirección IP del cliente
+    public Handler(Socket client) throws IOException
     {
+        this.client = client;
+        reader = new BufferedReader(
+                new InputStreamReader(client.getInputStream()));
         tablaDocs = new TablaDocs();
-        broadcastMessaging = new BroadcastConn(1234);
+        origen = 0;
     }
 
-    public void addDoc(String doc, int origen, ArrayList<Integer> particiones)
+    public void announce()
     {
-        //TODO: Verificar espacio disponible en los clientes para almacenar las particiones del documento
-        String title = doc + "_og" + origen; //Construye el título del documento con su origen
-        try
+        try {
+            broadcastMessaging.send(Codes.NEW_CLIENT, client.getInetAddress().getHostAddress().getBytes());
+        }
+        catch (IOException | IllegalArgumentException e)
         {
-            tablaDocs.insertarDoc(title, origen, particiones);
+            System.out.println("Error al anunciar nuevo cliente: " + e.getMessage());
             try
             {
-                //Envía un mensaje de broadcast para indicar que se ha agregado un nuevo documento a la tabla
-                broadcastMessaging.send(Codes.NEW_DOC, title.getBytes());
+                client.close();
             }
-            catch (java.io.IOException e)
+            catch (IOException ex)
             {
-                System.out.println("Error al enviar el mensaje de broadcast: " + e.getMessage());
+                System.out.println("Error al cerrar la conexión con el cliente: " + ex.getMessage());
             }
-            catch (IllegalArgumentException e)
-            {
-                System.out.println("Error al enviar el mensaje de broadcast: " + e.getMessage());
-            }
-            System.out.println("Documento agregado: " + title);
-        }
-        catch (IllegalArgumentException e) //El documento ya existe en la tabla
-        {
-            //TODO: Mandar mensaje al cliente origen actualizar o crear una copia del documento
         }
     }
 
-    public void abrirDoc(String doc, int origen) {
-        try
-        {
-            Documento documento = tablaDocs.get(doc, origen);
-            documento.abrir();
-            System.out.println("Documento abierto: " + doc);
-        }
-        catch (IllegalArgumentException e) //El documento no existe en la tabla
-        {
-            //TODO: Mandar mensaje de error al cliente origen
-        }
-    }
-
-    public void cerrarDoc(String doc, int origen)
+    public void processMessage() throws IOException
     {
-        try {
-            Documento documento = tablaDocs.get(doc, origen);
-            documento.cerrar();
-            System.out.println("Documento cerrado: " + doc);
-        }
-        catch (IllegalArgumentException e) //El documento no existe en la tabla
+        String message = reader.readLine();
+        if (message.length() < 2)
         {
-
+            System.out.println("Mensaje recibido con formato incorrecto");
+            return;
         }
-    }
-
-    public void eliminarDoc(String doc, int origen)
-    {
-        try {
-            tablaDocs.eliminarDoc(doc, origen);
-
-            System.out.println("Documento eliminado: " + doc);
-        }
-        catch (IllegalArgumentException e) //El documento no existe en la tabla
+        int code = message.getBytes()[0]; //El primer byte del mensaje es el código de la operación
+        String doc = message.substring(1); //El resto del mensaje es el nombre del documento
+        switch (code)
         {
-            //TODO: Mandar mensaje de error al cliente origen
-        }
-        catch (IllegalStateException e) //El documento está abierto
-        {
-            //TODO: Mandar mensaje de error al cliente origen
+            case Codes.NEW_DOC:
+                System.out.println("Mensaje recibido para agregar un nuevo documento: " + doc);
+                break;
+            case Codes.OPEN_DOC:
+                System.out.println("Mensaje recibido para abrir un documento: " + doc);
+                break;
+            case Codes.CLOSE_DOC:
+                System.out.println("Mensaje recibido para cerrar un documento: " + doc);
+                break;
+            case Codes.DELETE_DOC:
+                System.out.println("Mensaje recibido para eliminar un documento: " + doc);
+                break;
+            default:
+                System.out.println("Código de mensaje desconocido: " + code);
+                break;
         }
     }
 }
