@@ -2,25 +2,24 @@ package Proyecto2.Server;
 
 import Proyecto2.Codes;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.util.Objects;
 
 import static Proyecto2.Server.Main.broadcastMessaging;
+import static Proyecto2.Server.Main.tablaDocs;
 
 public class Handler implements Runnable {
-    private final TablaDocs tablaDocs;
     private final Socket client;
     private final BufferedReader reader;
+    private final PrintWriter writter;
     private final int origen; //El número de cliente que envió el mensaje, se asigna a partir de la dirección IP del cliente
 
     public Handler(Socket client) throws IOException {
         this.client = client;
         reader = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
-        tablaDocs = new TablaDocs();
+        writter = new PrintWriter(client.getOutputStream(), true);
         origen = 0;
     }
 
@@ -46,36 +45,41 @@ public class Handler implements Runnable {
             }
             int code = message.getBytes()[0]; //El primer byte del mensaje es el código de la operación
             String doc = message.substring(1); //El resto del mensaje es el nombre del documento
-            processMessage(code, doc);
+            try {
+                processMessage(code, doc);
+            } catch (Exception e) {
+                System.out.println("Ha ocurrido un error al procesar el mensaje: " + e.getMessage());
+                writter.println(((byte)Codes.ERROR) + "Ha ocurrido un error: " + e.getMessage());
+            }
         }
     }
 
     private String receive() {
         try {
             String message = reader.readLine();
-            if (message == null) {
-                return "";
-            }
-            else return message;
+            return Objects.requireNonNullElse(message, "");
         } catch (IOException e) {
             System.out.println("Error al recibir mensaje del cliente: " + e.getMessage());
             return "";
         }
     }
 
-    private void processMessage(int code, String doc) {
+    private void processMessage(int code, String doc) throws IllegalArgumentException, IOException {
         switch (code) {
             case Codes.NEW_DOC:
-                System.out.println("Mensaje recibido para agregar un nuevo documento: " + doc);
+                System.out.println("Mensaje recibido para crear un nuevo documento: " + doc);
+                tablaDocs.insertarDoc(doc, origen, new java.util.ArrayList<>());
                 break;
             case Codes.OPEN_DOC:
                 System.out.println("Mensaje recibido para abrir un documento: " + doc);
+                tablaDocs.get(doc);
                 break;
             case Codes.CLOSE_DOC:
                 System.out.println("Mensaje recibido para cerrar un documento: " + doc);
                 break;
             case Codes.DELETE_DOC:
                 System.out.println("Mensaje recibido para eliminar un documento: " + doc);
+                tablaDocs.eliminarDoc(doc);
                 break;
             default:
                 System.out.println("Código de mensaje desconocido: " + code);

@@ -1,7 +1,13 @@
 package Proyecto2.Server;
 
+import Proyecto2.Codes;
+
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
+import static Proyecto2.Server.Main.broadcastMessaging;
 
 public class TablaDocs
 {
@@ -12,31 +18,34 @@ public class TablaDocs
         tabla = new HashMap<>();
     }
 
-    public void insertarDoc(String name, int origen, ArrayList<Integer> particiones) throws IllegalArgumentException
+    public synchronized void insertarDoc(String name, int origen, ArrayList<Integer> particiones) throws IllegalArgumentException, IOException
     {
         String titulo = name + "_og" + origen; //Construye el título del documento con su origen
         if (tabla.containsKey(titulo))
             throw new IllegalArgumentException("El documento ya existe en la tabla");
 
         Documento doc = new Documento(titulo, origen, particiones);
-        tabla.put(name, doc); //Agrega el documento a la tabla con su lista de particiones
+        tabla.put(titulo, doc); //Agrega el documento a la tabla con su lista de particiones
+        //Anuncia a los clientes que se ha creado un nuevo documento
+        broadcastMessaging.send(Codes.NEW_DOC, titulo.getBytes());
     }
 
-    public Documento get(String name, int origin) throws IllegalArgumentException
+    public void get(String name) throws IllegalArgumentException, IOException
     {
-        String doc = name + "_og" + origin; //Construye el título del documento con su origen
-        if (!tabla.containsKey(doc))
+        if (!tabla.containsKey(name))
             throw new IllegalArgumentException("El documento no existe en la tabla");
-        return tabla.get(doc); //Devuelve la lista de particiones asociada al documento
+        Documento doc = tabla.get(name); //Devuelve la lista de particiones asociada al documento
+        doc.abrir(); //Marca el documento como abierto por el cliente
+        broadcastMessaging.send(Codes.OPEN_DOC, name.getBytes());
     }
 
-    public void eliminarDoc(String name, int origin) throws IllegalArgumentException, IllegalStateException
+    public synchronized void eliminarDoc(String name) throws IllegalArgumentException, IllegalStateException, IOException
     {
-        String doc = name + "_og" + origin; //Elimina el origen del título para buscar el documento en la tabla
-        if (!tabla.containsKey(doc))
+        if (!tabla.containsKey(name))
             throw new IllegalArgumentException("El documento no existe en la tabla");
-        else if (tabla.get(doc).estaAbierto())
+        else if (tabla.get(name).estaAbierto())
             throw new IllegalStateException("El documento no se puede eliminar porque está abierto");
-        tabla.remove(doc); //Elimina el documento de la tabla
+        tabla.remove(name); //Elimina el documento de la tabla
+        broadcastMessaging.send(Codes.DELETE_DOC, name.getBytes()); //Anuncia a los clientes que se ha eliminado un documento
     }
 }

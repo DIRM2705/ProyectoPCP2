@@ -15,7 +15,7 @@ public class Main {
         byte[] buffer = new byte[1024];
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
-        // Crear un socket para conectar al servidor en localhost puerto 9090
+        // Crear un socket para conectar al servidor
         Socket socket = new Socket("localhost", 1235);
 
         // Configurar stream de salida para enviar datos al servidor
@@ -30,8 +30,18 @@ public class Main {
         String received = new String(packet.getData(), 0, packet.getLength());
         System.out.println("Mensaje recibido: " + received);
 
-        byte[] data = {Codes.NEW_DOC, 'h', 'o', 'l', 'a'}; // El primer byte es el código de la operación, el resto es el mensaje
+        byte[] data = {Codes.NEW_DOC, 'h', 'o', 'l', 'a', '\n'}; // El primer byte es el código de la operación, el resto es el mensaje
         out.write(data);
+        System.out.println("Mensaje enviado al servidor: " + new String(data, 1, data.length - 1));
+
+        broad_sock.receive(packet);
+        received = new String(packet.getData(), 0, packet.getLength());
+        System.out.println("Mensaje recibido: " + received);
+
+        data = new byte[]{Codes.NEW_DOC, 'h', 'o', 'l', 'a', '\n'}; // El primer byte es el código de la operación, el resto es el mensaje
+        out.write(data);
+        System.out.println("Mensaje enviado al servidor: " + new String(data, 1, data.length - 1));
+        in.readLine(); // Leer la respuesta del servidor (si es necesario)
 
         // Cerrar el socket
         socket.close();
