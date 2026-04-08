@@ -3,6 +3,8 @@ package Proyecto2.Server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import static Proyecto2.Server.Main.connections;
+import static Proyecto2.Server.Main.tablaDocs;
 
 public class ConnectionManager
 {
@@ -21,6 +23,8 @@ public class ConnectionManager
             {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Cliente conectado: " + clientSocket.getInetAddress());
+                connections++;
+                tablaDocs.incrementarSemaforos();
                 Handler handler = new Handler(clientSocket);
                 handler.announce();
                 new Thread(handler).start();

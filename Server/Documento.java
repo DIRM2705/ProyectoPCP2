@@ -1,40 +1,34 @@
 package Proyecto2.Server;
 
-import java.util.ArrayList;
+import java.util.concurrent.Semaphore;
+
+import static Proyecto2.Server.Main.connections;
 
 public class Documento
 {
-    private ArrayList<Integer> particiones;
-    private int origen;
-    private String title;
+    private String id; //Número único del documento, se asigna a partir del contador de documentos en la clase Main
     private int aperturas; //Número de clientes que tienen el documento abierto
+    public Semaphore eliminar; //Semáforo para controlar el acceso a la eliminación del documento
 
-    public Documento(String title, int origen, ArrayList<Integer> particiones)
+    public Documento(String id)
     {
-        this.title = title;
-        this.origen = origen;
-        this.particiones = particiones;
+        this.id = id;
         aperturas = 0;
+        eliminar = new Semaphore(connections);
     }
 
-    public ArrayList<Integer> getParticiones()
-    {
-        return particiones;
+    public byte[] getID(){
+        return id.getBytes();
     }
 
-    public void abrir()
+    public synchronized void abrir()
     {
         aperturas++;
     }
 
-    public void cerrar()
+    public synchronized void cerrar()
     {
         if (aperturas > 0)
             aperturas--;
-    }
-
-    public boolean estaAbierto()
-    {
-        return aperturas > 0;
     }
 }

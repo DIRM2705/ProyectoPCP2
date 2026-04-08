@@ -68,17 +68,23 @@ public class Handler implements Runnable {
         switch (code) {
             case Codes.NEW_DOC:
                 System.out.println("Mensaje recibido para crear un nuevo documento: " + doc);
-                tablaDocs.insertarDoc(doc, origen, new java.util.ArrayList<>());
+                String titulo = doc + "og_" + origen; //Agrega el número de cliente al título del documento para evitar conflictos de nombres
+                if(tablaDocs.existeDoc(titulo)) throw new IllegalArgumentException("Ya existe un documento con ese nombre");
+                tablaDocs.insertarDoc(doc);
                 break;
             case Codes.OPEN_DOC:
                 System.out.println("Mensaje recibido para abrir un documento: " + doc);
-                tablaDocs.get(doc);
+                if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe un documento con ese nombre");
+                tablaDocs.abrirDoc(doc);
                 break;
             case Codes.CLOSE_DOC:
                 System.out.println("Mensaje recibido para cerrar un documento: " + doc);
+                if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe un documento con ese nombre");
+                tablaDocs.cerrarDoc(doc);
                 break;
             case Codes.DELETE_DOC:
                 System.out.println("Mensaje recibido para eliminar un documento: " + doc);
+                if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe un documento con ese nombre");
                 tablaDocs.eliminarDoc(doc);
                 break;
             default:

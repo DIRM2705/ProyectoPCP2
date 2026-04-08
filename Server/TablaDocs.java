@@ -2,12 +2,11 @@ package Proyecto2.Server;
 
 import Proyecto2.Codes;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
-import static Proyecto2.Server.Main.broadcastMessaging;
+
+import static Proyecto2.Server.Main.*;
 
 public class TablaDocs
 {
@@ -18,34 +17,65 @@ public class TablaDocs
         tabla = new HashMap<>();
     }
 
-    public synchronized void insertarDoc(String name, int origen, ArrayList<Integer> particiones) throws IllegalArgumentException, IOException
+    public boolean existeDoc(String name)
     {
-        String titulo = name + "_og" + origen; //Construye el título del documento con su origen
-        if (tabla.containsKey(titulo))
-            throw new IllegalArgumentException("El documento ya existe en la tabla");
+        return tabla.containsKey(name);
+    }
 
-        Documento doc = new Documento(titulo, origen, particiones);
+    public void incrementarSemaforos()
+    {
+        /*
+        Incrementa el número de permisos disponibles en los semáforos de eliminación de cada documento, esto se hace
+        cada vez que un nuevo cliente se conecta al servidor para permitir que el nuevo cliente pueda abrir
+        los documentos existentes
+         */
+
+        for (Documento doc : tabla.values())
+        {
+            doc.eliminar.release();
+        }
+    }
+
+    public synchronized void insertarDoc(String titulo) throws IOException
+    {
+        Documento doc = new Documento(""+(docCounter++)); //Crea un nuevo documento con un ID único
         tabla.put(titulo, doc); //Agrega el documento a la tabla con su lista de particiones
         //Anuncia a los clientes que se ha creado un nuevo documento
-        broadcastMessaging.send(Codes.NEW_DOC, titulo.getBytes());
+        broadcastMessaging.send(Codes.NEW_DOC, doc.getID());
     }
 
-    public void get(String name) throws IllegalArgumentException, IOException
+    public void abrirDoc(String name) throws IOException
     {
-        if (!tabla.containsKey(name))
-            throw new IllegalArgumentException("El documento no existe en la tabla");
-        Documento doc = tabla.get(name); //Devuelve la lista de particiones asociada al documento
-        doc.abrir(); //Marca el documento como abierto por el cliente
-        broadcastMessaging.send(Codes.OPEN_DOC, name.getBytes());
+        Documento doc = tabla.get(name); //Devuelve la info del documento
+        if(doc.eliminar.tryAcquire())
+        {
+            doc.abrir();
+            broadcastMessaging.send(Codes.OPEN_DOC, doc.getID());
+        }
+        else
+        {
+            throw new IllegalStateException("El documento no se puede abrir porque está siendo eliminado");
+        }
     }
 
-    public synchronized void eliminarDoc(String name) throws IllegalArgumentException, IllegalStateException, IOException
+    public void cerrarDoc(String name) throws IOException
     {
-        if (!tabla.containsKey(name))
-            throw new IllegalArgumentException("El documento no existe en la tabla");
-        else if (tabla.get(name).estaAbierto())
-            throw new IllegalStateException("El documento no se puede eliminar porque está abierto");
+        Documento doc = tabla.get(name); //Devuelve la info del documento
+        doc.cerrar();
+        broadcastMessaging.send(Codes.CLOSE_DOC, doc.getID());
+    }
+
+    public void eliminarDoc(String name) throws IllegalStateException, IOException
+    {
+        Documento doc = tabla.get(name); //Devuelve la info del documento
+        //Intenta adquirir el semáforo para eliminar el documento,
+        //si no se puede adquirir es porque hay clientes con el documento abierto
+        if(!doc.eliminar.tryAcquire(connections))
+        {
+            throw new IllegalStateException("El documento no se puede eliminar porque hay clientes con el documento abierto");
+        }
+        byte[] id = tabla.get(name).getID(); //Obtiene el ID del documento antes de eliminarlo
         tabla.remove(name); //Elimina el documento de la tabla
-        broadcastMessaging.send(Codes.DELETE_DOC, name.getBytes()); //Anuncia a los clientes que se ha eliminado un documento
+        broadcastMessaging.send(Codes.DELETE_DOC, id); //Anuncia a los clientes que se ha eliminado un documento
     }
 }
