@@ -44,13 +44,16 @@ public class TablaDocs
         broadcastMessaging.send(Codes.NEW_DOC, doc.getID());
     }
 
-    public void abrirDoc(String name) throws IOException
+    public void abrirDoc(String name, byte[] origen) throws IOException
     {
         Documento doc = tabla.get(name); //Devuelve la info del documento
         if(doc.eliminar.tryAcquire())
         {
             doc.abrir();
-            broadcastMessaging.send(Codes.OPEN_DOC, doc.getID());
+            byte[] data = new byte[doc.getID().length + origen.length];
+            System.arraycopy(doc.getID(), 0, data, 0, doc.getID().length);
+            System.arraycopy(origen, 0, data, doc.getID().length, origen.length);
+            broadcastMessaging.send(Codes.OPEN_DOC, data);
         }
         else
         {

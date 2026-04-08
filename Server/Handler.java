@@ -6,21 +6,20 @@ import java.io.*;
 import java.net.Socket;
 import java.util.Objects;
 
-import static Proyecto2.Server.Main.broadcastMessaging;
-import static Proyecto2.Server.Main.tablaDocs;
+import static Proyecto2.Server.Main.*;
 
 public class Handler implements Runnable {
     private final Socket client;
     private final BufferedReader reader;
     private final PrintWriter writter;
-    private final int origen; //El número de cliente que envió el mensaje, se asigna a partir de la dirección IP del cliente
+    private final String origen; //El número de cliente que envió el mensaje, se asigna a partir de la dirección IP del cliente
 
     public Handler(Socket client) throws IOException {
         this.client = client;
         reader = new BufferedReader(
                 new InputStreamReader(client.getInputStream()));
         writter = new PrintWriter(client.getOutputStream(), true);
-        origen = 0;
+        origen = client.getInetAddress().getHostAddress();
     }
 
     public void announce() {
@@ -68,14 +67,13 @@ public class Handler implements Runnable {
         switch (code) {
             case Codes.NEW_DOC:
                 System.out.println("Mensaje recibido para crear un nuevo documento: " + doc);
-                String titulo = doc + "og_" + origen; //Agrega el número de cliente al título del documento para evitar conflictos de nombres
-                if(tablaDocs.existeDoc(titulo)) throw new IllegalArgumentException("Ya existe un documento con ese nombre");
+                if(tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("Ya existe un documento con ese nombre");
                 tablaDocs.insertarDoc(doc);
                 break;
             case Codes.OPEN_DOC:
                 System.out.println("Mensaje recibido para abrir un documento: " + doc);
                 if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe un documento con ese nombre");
-                tablaDocs.abrirDoc(doc);
+                tablaDocs.abrirDoc(doc, origen.getBytes());
                 break;
             case Codes.CLOSE_DOC:
                 System.out.println("Mensaje recibido para cerrar un documento: " + doc);
