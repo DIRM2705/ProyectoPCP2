@@ -85,6 +85,26 @@ public class Handler implements Runnable {
                 if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe un documento con ese nombre");
                 tablaDocs.eliminarDoc(doc);
                 break;
+            case Codes.REPORT_CHUNK:
+                // El formato que recibiremos del cliente será: "nombreDoc:numFragmento"
+                // Ejemplo: "mi_archivo.txt:3"
+                String[] partesReporte = doc.split(":");
+                if(partesReporte.length == 2) {
+                    String nombreDocumento = partesReporte[0];
+                    int numFragmento = Integer.parseInt(partesReporte[1]);
+                    tablaDocs.registrarFragmento(nombreDocumento, numFragmento, origen); // "origen" es la IP del cliente (ya la tienes en la clase)
+                }
+                break;
+            case Codes.REQUEST_LOCATIONS:
+                // El cliente nos pide dónde están los fragmentos de un documento
+                System.out.println("Cliente " + origen + " solicitó ubicaciones del doc: " + doc);
+                if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe el documento");
+                
+                String mapa = tablaDocs.obtenerMapaUbicacionesComoString(doc);
+                
+                // Le respondemos SOLO a este cliente (usamos su writter TCP, no un broadcast UDP)
+                writter.println(((char)Codes.LOCATIONS_RESPONSE) + mapa);
+                break;
             default:
                 System.out.println("Código de mensaje desconocido: " + code);
                 break;

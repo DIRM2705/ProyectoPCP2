@@ -81,4 +81,31 @@ public class TablaDocs
         tabla.remove(name); //Elimina el documento de la tabla
         broadcastMessaging.send(Codes.DELETE_DOC, id); //Anuncia a los clientes que se ha eliminado un documento
     }
+
+    // Método para que un cliente reporte que tiene un pedazo
+    public void registrarFragmento(String docName, int numFragmento, String ipCliente) {
+        if (existeDoc(docName)) {
+            Documento doc = tabla.get(docName);
+            doc.registrarUbicacion(numFragmento, ipCliente);
+            System.out.println("Registrado: Fragmento " + numFragmento + " del doc '" + docName + "' está en IP " + ipCliente);
+        }
+    }
+
+    // Método para que el servidor empaquete el "mapa" y se lo envíe al cliente que lo pide
+    public String obtenerMapaUbicacionesComoString(String docName) {
+        if (!existeDoc(docName)) return "";
+        
+        Documento doc = tabla.get(docName);
+        HashMap<Integer, String> ubicaciones = doc.getUbicaciones();
+        
+        // Vamos a crear un string fácil de leer para el cliente, formato: "0:192.168.1.5;1:192.168.1.6;2:192.168.1.5"
+        StringBuilder mapaStr = new StringBuilder();
+        mapaStr.append(doc.getTotalFragmentos()).append("|"); // Ponemos el total al inicio
+        
+        for (Integer frag : ubicaciones.keySet()) {
+            mapaStr.append(frag).append(":").append(ubicaciones.get(frag)).append(";");
+        }
+        
+        return mapaStr.toString();
+    }
 }
