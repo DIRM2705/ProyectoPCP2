@@ -22,15 +22,28 @@ public class Handler implements Runnable {
         origen = client.getInetAddress().getHostAddress();
     }
 
-    public void announce() {
+public void announce() {
         try {
-            broadcastMessaging.send(Codes.NEW_CLIENT, client.getInetAddress().getHostAddress().getBytes());
+            // 1. Obtenemos la IP real de quien se acaba de conectar
+            String ipNuevoCliente = client.getInetAddress().getHostAddress();
+            
+            // 2. Lo guardamos en la memoria central del Servidor
+            Main.clientesConectados.add(ipNuevoCliente);
+            
+            // 3. ¡EL TRUCO MÁGICO! Recorremos la lista y anunciamos a TODOS.
+            // Así, el nuevo se entera de los viejos, y los viejos se enteran del nuevo.
+            for (String ipRegistrada : Main.clientesConectados) {
+                broadcastMessaging.send(Codes.NEW_CLIENT, ipRegistrada.getBytes());
+            }
+            
+            System.out.println("Se ha actualizado la red. Clientes totales: " + Main.clientesConectados.size());
+            
         } catch (IOException | IllegalArgumentException e) {
-            System.out.println("Error al anunciar nuevo cliente: " + e.getMessage());
+            System.out.println("Error al anunciar clientes: " + e.getMessage());
             try {
                 client.close();
             } catch (IOException ex) {
-                System.out.println("Error al cerrar la conexión con el cliente: " + ex.getMessage());
+                System.out.println("Error al cerrar la conexión: " + ex.getMessage());
             }
         }
     }
@@ -105,6 +118,11 @@ public class Handler implements Runnable {
                 // Le respondemos SOLO a este cliente (usamos su writter TCP, no un broadcast UDP)
                 writter.println(((char)Codes.LOCATIONS_RESPONSE) + mapa);
                 break;
+                case Codes.INVENTORY: // LIST_DOCS
+                    System.out.println("Cliente " + origen + " solicitó la lista de documentos.");
+                    String listaArchivos = tablaDocs.obtenerListaDocumentos();
+                    writter.println(listaArchivos); // Le enviamos la lista en texto plano
+                 break;
             default:
                 System.out.println("Código de mensaje desconocido: " + code);
                 break;
