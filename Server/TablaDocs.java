@@ -90,7 +90,13 @@ public class TablaDocs
             System.out.println("Registrado: Fragmento " + numFragmento + " del doc '" + docName + "' está en IP " + ipCliente);
         }
     }
-
+    public String obtenerListaDocumentos() {
+    if (tabla.isEmpty()) {
+        return "VACIO";
+    }
+    // Junta todos los nombres de los archivos separados por comas
+    return String.join(",", tabla.keySet()); 
+}
     // Método para que el servidor empaquete el "mapa" y se lo envíe al cliente que lo pide
     public String obtenerMapaUbicacionesComoString(String docName) {
         if (!existeDoc(docName)) return "";
