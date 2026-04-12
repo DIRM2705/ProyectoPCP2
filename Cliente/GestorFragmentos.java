@@ -2,6 +2,7 @@ package Proyecto2.Cliente;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -63,5 +64,26 @@ public class GestorFragmentos {
             }
             bos.flush(); // Asegurar que todo se escriba en disco
         }
+    }
+    public static void ensamblarArchivo(List<Fragmento> fragmentos, String rutaDestino) throws IOException {
+        if (fragmentos == null || fragmentos.isEmpty()) return;
+
+        // 1. Es CRUCIAL ordenar los fragmentos, porque por la red pueden llegar en desorden (ej. 0, 2, 1)
+        Collections.sort(fragmentos, new Comparator<Fragmento>() {
+            @Override
+            public int compare(Fragmento f1, Fragmento f2) {
+                return Integer.compare(f1.getNumeroSecuencia(), f2.getNumeroSecuencia());
+            }
+        });
+
+        // 2. Abrimos un archivo físico para empezar a escribir
+        try (FileOutputStream fos = new FileOutputStream(rutaDestino)) {
+            // 3. Recorremos los fragmentos ordenados y escribimos sus bytes
+            for (Fragmento frag : fragmentos) {
+                fos.write(frag.getDatos());
+            }
+            fos.flush();
+        }
+        System.out.println("Archivo ensamblado exitosamente en: " + rutaDestino);
     }
 }
