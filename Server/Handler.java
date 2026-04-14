@@ -24,13 +24,10 @@ public class Handler implements Runnable {
 
 public void announce() {
         try {
-            // 1. Obtenemos la IP real de quien se acaba de conectar
-            String ipNuevoCliente = client.getInetAddress().getHostAddress();
+            // 1. Lo guardamos en la memoria central del Servidor
+            Main.clientesConectados.add(origen);
             
-            // 2. Lo guardamos en la memoria central del Servidor
-            Main.clientesConectados.add(ipNuevoCliente);
-            
-            // 3. ¡EL TRUCO MÁGICO! Recorremos la lista y anunciamos a TODOS.
+            // 2. Recorremos la lista y anunciamos a TODOS.
             // Así, el nuevo se entera de los viejos, y los viejos se enteran del nuevo.
             for (String ipRegistrada : Main.clientesConectados) {
                 broadcastMessaging.send(Codes.NEW_CLIENT, ipRegistrada.getBytes());
@@ -51,6 +48,17 @@ public void announce() {
     public void run() {
         while (true) {
             String message = receive();
+            if(message.equals("FinHilo"))
+            {
+                System.out.println("El cliente " + origen + " se ha desconectado.");
+                clientesConectados.remove(origen);
+                try {
+                    client.close();
+                } catch (IOException e) {
+                    System.out.println("Error al cerrar la conexión: " + e.getMessage());
+                }
+                break; // Salimos del bucle para terminar el hilo
+            }
             if (message.length() < 2) {
                 System.out.println("Mensaje recibido con formato incorrecto");
                 return;
@@ -71,7 +79,10 @@ public void announce() {
             String message = reader.readLine();
             return Objects.requireNonNullElse(message, "");
         } catch (IOException e) {
-            System.out.println("Error al recibir mensaje del cliente: " + e.getMessage());
+            if(Objects.equals(e.getMessage(), "Connection reset"))
+                return "FinHilo"; // Indicamos que el cliente se ha desconectado abruptamente
+            else
+                System.out.println("Error al recibir mensaje del cliente: " + e.getMessage());
             return "";
         }
     }
