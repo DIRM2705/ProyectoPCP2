@@ -8,8 +8,6 @@ import java.util.HashMap;
 public class ServidorP2P implements Runnable {
     private final int puertoP2P = 1236;
     
-    // Mantenemos tu HashMap por si otras partes del programa lo necesitan leer,
-    // pero ya no será el medio de almacenamiento principal.
     public static final HashMap<String, Fragmento> misFragmentos = new HashMap<>();
     
     // Nombre de la carpeta donde se guardarán los fragmentos físicamente
@@ -48,7 +46,7 @@ public class ServidorP2P implements Runnable {
                 int numSecuencia = Integer.parseInt(partes[2]);
                 String clave = nombreDoc + ":" + numSecuencia;
                 
-                // 1. En lugar de buscar en el HashMap, LEEMOS DIRECTAMENTE DEL DISCO
+                // 1. Leer desde disco
                 Fragmento fragSolicitado = leerDeDisco(nombreDoc, numSecuencia);
                 
                 if (fragSolicitado != null) {
@@ -60,18 +58,17 @@ public class ServidorP2P implements Runnable {
                 }
                 
             } else if (accion.equals("STORE")) {
-                // Lógica de SUBIDA (Un vecino nos está regalando un pedazo)
+                // Lógica de SUBIDA 
                 Fragmento fragNuevo = (Fragmento) entradaObj.readObject();
                 String clave = fragNuevo.getIdDocumento() + ":" + fragNuevo.getNumeroSecuencia();
                 
                 // 1. Guardamos el fragmento FÍSICAMENTE en el disco duro
                 guardarEnDisco(fragNuevo);
                 
-                // 2. Lo guardamos en memoria local (opcional, para no romper código externo)
+                // 2. Lo guardamos en memoria local
                 misFragmentos.put(clave, fragNuevo);
                 System.out.println("\n[P2P] Fragmento " + clave + " recibido y guardado en DISCO.");
                 
-                // 3. ¡EL REPORTE AUTOMÁTICO! Le avisamos al servidor central
                 servidorTracker.reportarFragmento(fragNuevo.getIdDocumento(), fragNuevo.getNumeroSecuencia());
             }
             
