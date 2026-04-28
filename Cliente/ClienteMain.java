@@ -21,10 +21,8 @@ public class ClienteMain {
         
         // 2. Iniciar la conexión de control con el servidor (TCP)
         try {
-            // PRIMERO creas la conexión con el servidor central
             ConexionServidor servidor = new ConexionServidor("192.168.1.69", 1235);
             
-            // LUEGO inicias el servidor P2P pasándole esa conexión al constructor
             Thread hiloP2P = new Thread(new ServidorP2P(servidor));
             hiloP2P.setDaemon(true);
             hiloP2P.start();
@@ -34,7 +32,6 @@ public class ClienteMain {
             System.out.println("Conexión establecida con el servidor principal.");
             System.out.println("Comandos disponibles: crear <nombre>, abrir <nombre>, borrar <nombre>, salir");
             
-            // SE ELIMINÓ LA DUPLICACIÓN AQUÍ
             while (true) {
                 System.out.print("> ");
                 String input = scanner.nextLine().trim();
@@ -74,7 +71,6 @@ public class ClienteMain {
                             
                             if (vecinosDisponibles.isEmpty()) {
                                 System.out.println("No hay vecinos conectados. Guardando el archivo completo localmente...");
-                                // Si estás solo, guardas los fragmentos en tu propia memoria y le reportas al servidor
                                 for (Fragmento frag : fragmentos) {
                                     ServidorP2P.misFragmentos.put(nombreDoc + ":" + frag.getNumeroSecuencia(), frag);
                                     servidor.reportarFragmento(nombreDoc, frag.getNumeroSecuencia());
@@ -112,10 +108,10 @@ public class ClienteMain {
             System.out.println("Cliente desconectado.");
             System.exit(0);
             
-        } catch (Exception e) { // Cierre correcto del try-catch
+        } catch (Exception e) {
             System.err.println("Fallo al conectar con el servidor TCP: " + e.getMessage());
         }
-    } // Cierre correcto del main
+    }
     
     public static void enviarFragmentoAVecino(String ipVecino, Fragmento fragmento) {
         try (Socket socket = new Socket(ipVecino, 1236);
