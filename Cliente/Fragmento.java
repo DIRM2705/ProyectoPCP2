@@ -2,7 +2,6 @@ package Proyecto2.Cliente;
 
 import java.io.Serializable;
 
-// Implementamos Serializable por si decides enviarlos usando ObjectOutputStream más adelante
 public class Fragmento implements Serializable {
     private String idDocumento;
     private int numeroSecuencia;
