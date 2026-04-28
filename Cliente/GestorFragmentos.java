@@ -8,7 +8,7 @@ import java.util.List;
 
 public class GestorFragmentos {
 
-    // Tamaño de cada bloque (ej. 64 KB). Puedes ajustarlo según las necesidades de la red.
+    // Tamaño de cada bloque
     private static final int TAMANO_MAX_FRAGMENTO = 64 * 1024; 
 
     /**
@@ -68,7 +68,7 @@ public class GestorFragmentos {
     public static void ensamblarArchivo(List<Fragmento> fragmentos, String rutaDestino) throws IOException {
         if (fragmentos == null || fragmentos.isEmpty()) return;
 
-        // 1. Es CRUCIAL ordenar los fragmentos, porque por la red pueden llegar en desorden (ej. 0, 2, 1)
+        // 1. Ordenar fragmentos
         Collections.sort(fragmentos, new Comparator<Fragmento>() {
             @Override
             public int compare(Fragmento f1, Fragmento f2) {
