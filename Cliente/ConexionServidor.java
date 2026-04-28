@@ -17,18 +17,16 @@ public class ConexionServidor {
     }
 
     public synchronized void enviarComando(int codigo, String nombreDoc) throws IOException {
-        // Es vital agregar el salto de línea para que reader.readLine() en el servidor funcione
         String payload = nombreDoc + "\n";
         byte[] bytesString = payload.getBytes();
         
-        // El arreglo final tiene 1 byte extra para el código de operación
         byte[] mensaje = new byte[1 + bytesString.length];
         mensaje[0] = (byte) codigo;
         
         // Copiamos el texto después del código
         System.arraycopy(bytesString, 0, mensaje, 1, bytesString.length);
         
-        // Enviamos el mensaje en bruto
+        // Enviamos el mensaje
         salida.write(mensaje);
         salida.flush();
     }
@@ -48,9 +46,7 @@ public class ConexionServidor {
     public void pedirMapaUbicaciones(String nombreDoc) throws IOException {
         enviarComando(8, nombreDoc);
     }
-    // ... (tu código anterior en ConexionServidor) ...
 
-    // NUEVO MÉTODO: Recibe la respuesta de la petición 8 y la convierte en Mapa
     public HashMap<Integer, String> recibirMapaUbicaciones() throws IOException {
         HashMap<Integer, String> mapa = new HashMap<>();
         
@@ -68,7 +64,7 @@ public class ConexionServidor {
             
             if(separacionPrincipal.length < 2) return null; 
             
-            // APLICAMOS EL FILTRO AQUÍ: Borra cualquier cosa que no sea un número
+            // Borra cualquier cosa que no sea un número
             String totalLimpio = separacionPrincipal[0].replaceAll("[^0-9]", "");
             int totalFragmentos = Integer.parseInt(totalLimpio);
             
@@ -84,7 +80,6 @@ public class ConexionServidor {
                 String[] partes = par.split(":");
                 if (partes.length == 2) {
                     
-                    // APLICAMOS EL FILTRO AQUÍ TAMBIÉN
                     String numLimpio = partes[0].replaceAll("[^0-9]", "");
                     int numFrag = Integer.parseInt(numLimpio);
                     
@@ -107,8 +102,6 @@ public class ConexionServidor {
         return mapa;
     }
     public List<String> pedirListaArchivos() throws IOException {
-    // Enviamos el código 9. Mandamos "LIST" como relleno porque tu función 
-    // enviarComando exige un String, aunque el servidor lo va a ignorar.
     enviarComando(11, "LIST"); 
     
     String respuesta = entrada.readLine();
