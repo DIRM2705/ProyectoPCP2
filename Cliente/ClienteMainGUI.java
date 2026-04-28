@@ -44,7 +44,7 @@ public class ClienteMainGUI extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
 
-        // --- Panel Central (Consola) ---
+        // --- Panel Central (La "Consola") ---
         areaConsola = new JTextArea();
         areaConsola.setEditable(false);
         areaConsola.setBackground(Color.BLACK);
@@ -112,7 +112,7 @@ public class ClienteMainGUI extends JFrame {
                     });
     }
 
-    // Lógica del JFileChooser
+    // NUEVO MÉTODO: Lógica del JFileChooser
     private void abrirBuscadorArchivos() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Selecciona un archivo para compartir");
@@ -144,12 +144,18 @@ public class ClienteMainGUI extends JFrame {
 
         try {
             servidor = new ConexionServidor(ipServidor, 1235);
-            
-            Thread hiloP2P = new Thread(new ServidorP2P(servidor));
+
+            ServidorP2P miServidorP2P = new ServidorP2P(servidor);
+            Thread hiloP2P = new Thread(miServidorP2P);
             hiloP2P.setDaemon(true);
             hiloP2P.start();
 
             imprimirLog("Conexión establecida con el servidor en: " + ipServidor);
+            
+            // --- NUEVA LÍNEA AQUÍ ---
+            // Le decimos al servidor local que lea el disco y reporte lo que tiene
+            miServidorP2P.reportarInventarioLocal();
+            
             imprimirLog("Listo para recibir instrucciones.");
 
         } catch (Exception e) {
@@ -233,7 +239,7 @@ public class ClienteMainGUI extends JFrame {
 
                     imprimirLog("¡Mapa recibido! El archivo tiene " + mapaUbicaciones.size() + " fragmentos.");
 
-                    // 3. Iniciamos la Fase 2 de descarga
+                    // 3. ¡Iniciamos la Fase 2 de descarga!
                     iniciarDescarga(nombreDoc, mapaUbicaciones); 
 
                 } catch (IOException e) {
@@ -298,7 +304,7 @@ private void iniciarDescarga(String nombreDoc, HashMap<Integer, String> mapaUbic
     String rutaDestino = "descarga_" + nombreDoc; 
     
     try {
-        // Pegamos los pedazos físicamente en el disco duro
+        // 1. Pegamos los pedazos físicamente en el disco duro
         GestorFragmentos.ensamblarArchivo(fragmentosRecolectados, rutaDestino);
         
         abrirArchivoConSistemaOperativo(rutaDestino);
@@ -340,7 +346,7 @@ private Fragmento pedirFragmentoAVecino(String ipVecino, String nombreDoc, int n
          ObjectOutputStream salidaObj = new ObjectOutputStream(socket.getOutputStream());
          ObjectInputStream entradaObj = new ObjectInputStream(socket.getInputStream())) {
         
-        // 1. Pedir archivo
+        // 1. Le decimos al vecino "Dame este archivo y este pedazo exacto"
         salidaObj.writeUTF("GET:" + nombreDoc + ":" + numSecuencia);
         salidaObj.flush();
         

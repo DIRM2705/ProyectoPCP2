@@ -8,6 +8,8 @@ import java.util.HashMap;
 public class ServidorP2P implements Runnable {
     private final int puertoP2P = 1236;
     
+    // Mantenemos tu HashMap por si otras partes del programa lo necesitan leer,
+    // pero ya no será el medio de almacenamiento principal.
     public static final HashMap<String, Fragmento> misFragmentos = new HashMap<>();
     
     // Nombre de la carpeta donde se guardarán los fragmentos físicamente
@@ -46,7 +48,7 @@ public class ServidorP2P implements Runnable {
                 int numSecuencia = Integer.parseInt(partes[2]);
                 String clave = nombreDoc + ":" + numSecuencia;
                 
-                // 1. Leer desde disco
+                // 1. En lugar de buscar en el HashMap, LEEMOS DIRECTAMENTE DEL DISCO
                 Fragmento fragSolicitado = leerDeDisco(nombreDoc, numSecuencia);
                 
                 if (fragSolicitado != null) {
@@ -58,23 +60,70 @@ public class ServidorP2P implements Runnable {
                 }
                 
             } else if (accion.equals("STORE")) {
-                // Lógica de SUBIDA 
+                // Lógica de SUBIDA (Un vecino nos está regalando un pedazo)
                 Fragmento fragNuevo = (Fragmento) entradaObj.readObject();
                 String clave = fragNuevo.getIdDocumento() + ":" + fragNuevo.getNumeroSecuencia();
                 
                 // 1. Guardamos el fragmento FÍSICAMENTE en el disco duro
                 guardarEnDisco(fragNuevo);
                 
-                // 2. Lo guardamos en memoria local
+                // 2. Lo guardamos en memoria local (opcional, para no romper código externo)
                 misFragmentos.put(clave, fragNuevo);
                 System.out.println("\n[P2P] Fragmento " + clave + " recibido y guardado en DISCO.");
                 
+                // 3. ¡EL REPORTE AUTOMÁTICO! Le avisamos al servidor central
                 servidorTracker.reportarFragmento(fragNuevo.getIdDocumento(), fragNuevo.getNumeroSecuencia());
             }
             
         } catch (Exception e) { 
             System.err.println("Error en comunicación P2P: " + e.getMessage());
         }
+    }
+    // =========================================================================
+    // MÉTODO NUEVO: INVENTARIO AL ARRANCAR
+    // =========================================================================
+    public void reportarInventarioLocal() {
+        File directorio = new File(CARPETA_OCULTA);
+        
+        // Si no existe la carpeta o está vacía, no hay nada que reportar
+        if (!directorio.exists() || !directorio.isDirectory()) {
+            System.out.println("[Inventario] No hay fragmentos guardados localmente aún.");
+            return;
+        }
+
+        File[] archivos = directorio.listFiles();
+        if (archivos == null || archivos.length == 0) {
+            System.out.println("[Inventario] La carpeta está vacía.");
+            return;
+        }
+
+        System.out.println("[Inventario] Encontrados " + archivos.length + " archivos locales. Reportando al servidor...");
+        
+        for (File archivo : archivos) {
+            String nombre = archivo.getName();
+            
+            // Recordamos que los guardamos como: idDocumento_parte_numeroSecuencia.frag
+            if (nombre.endsWith(".frag") && nombre.contains("_parte_")) {
+                try {
+                    // Quitamos la extensión ".frag"
+                    String sinExtension = nombre.replace(".frag", "");
+                    
+                    // Cortamos el texto por la palabra "_parte_"
+                    String[] partes = sinExtension.split("_parte_");
+                    
+                    String idDocumento = partes[0];
+                    int numSecuencia = Integer.parseInt(partes[1]);
+
+                    // ¡Reutilizamos tu método para avisarle al servidor!
+                    servidorTracker.reportarFragmento(idDocumento, numSecuencia);
+                    System.out.println(" -> Reportado: " + idDocumento + " (Parte " + numSecuencia + ")");
+                    
+                } catch (Exception e) {
+                    System.err.println("Archivo con nombre inválido ignorado: " + nombre);
+                }
+            }
+        }
+        System.out.println("[Inventario] Reporte de inicio finalizado.");
     }
 
     // =========================================================================
