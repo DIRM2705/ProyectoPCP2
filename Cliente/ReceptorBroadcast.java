@@ -37,7 +37,6 @@ public class ReceptorBroadcast implements Runnable {
     }
 
     private void procesarNotificacion(int codigo, String datos) {
-        // Usamos los mismos códigos de tu archivo Codes.java
         switch (codigo) {
             case Codes.NEW_DOC:
                 System.out.println("\n[Alerta Global] Se ha creado un nuevo documento con ID: " + datos);
@@ -48,10 +47,9 @@ public class ReceptorBroadcast implements Runnable {
             case Codes.NEW_CLIENT:
                 System.out.println("\n[Alerta Global] Nuevo cliente conectado desde IP: " + datos);
                 break;
-            // Aquí puedes agregar OPEN_DOC y CLOSE_DOC
             default:
                 System.out.println("\n[Alerta Global] Mensaje recibido (Código " + codigo + "): " + datos);
         }
-        System.out.print("> "); // Para no arruinar la línea de comandos
+        System.out.print("> ");
     }
 }
