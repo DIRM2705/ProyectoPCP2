@@ -65,6 +65,7 @@ public class TablaDocs
     {
         Documento doc = tabla.get(name); //Devuelve la info del documento
         doc.cerrar();
+        doc.eliminar.release();
         broadcastMessaging.send(Codes.CLOSE_DOC, doc.getID());
     }
 
