@@ -94,16 +94,6 @@ public void announce() {
                 if(tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("Ya existe un documento con ese nombre");
                 tablaDocs.insertarDoc(doc);
                 break;
-            case Codes.OPEN_DOC:
-                System.out.println("Mensaje recibido para abrir un documento: " + doc);
-                if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe un documento con ese nombre");
-                tablaDocs.abrirDoc(doc, origen.getBytes());
-                break;
-            case Codes.CLOSE_DOC:
-                System.out.println("Mensaje recibido para cerrar un documento: " + doc);
-                if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe un documento con ese nombre");
-                tablaDocs.cerrarDoc(doc);
-                break;
             case Codes.DELETE_DOC:
                 System.out.println("Mensaje recibido para eliminar un documento: " + doc);
                 if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe un documento con ese nombre");
