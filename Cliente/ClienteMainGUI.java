@@ -103,7 +103,6 @@ public class ClienteMainGUI extends JFrame {
             JButton btnListar = new JButton("Ver Red");
             panelControles.add(btnListar);
 
-            // Le asignamos su acción:
             btnListar.addActionListener(e -> {
                         try {
                             procesarComando("listar");
@@ -122,7 +121,7 @@ public class ClienteMainGUI extends JFrame {
         
         if (seleccion == JFileChooser.APPROVE_OPTION) {
             archivoSeleccionadoLocal = fileChooser.getSelectedFile();
-            // Ponemos solo el nombre del archivo en la caja de texto
+      
             txtNombreArchivo.setText(archivoSeleccionadoLocal.getName());
             imprimirLog("Archivo preparado: " + archivoSeleccionadoLocal.getAbsolutePath());
         }
@@ -201,8 +200,7 @@ public class ClienteMainGUI extends JFrame {
                     if (vecinosDisponibles.isEmpty()) {
                         imprimirLog("No hay vecinos. Guardando localmente...");
                         for (Fragmento frag : fragmentos) {
-                            ServidorP2P.misFragmentos.put(nombreDoc + ":" + frag.getNumeroSecuencia(), frag);
-                            servidor.reportarFragmento(nombreDoc, frag.getNumeroSecuencia());
+                            enviarFragmentoAVecino("127.0.0.1", frag);
                         }
                     } else {
                         imprimirLog("Distribuyendo entre " + vecinosDisponibles.size() + " vecinos...");
@@ -266,14 +264,13 @@ public class ClienteMainGUI extends JFrame {
         } catch (IOException ex) {
             imprimirLog("Error al pedir la lista al servidor: " + ex.getMessage());
         }
-    }).start(); // ¡No olvides el .start()!
+    }).start(); 
     break;        }
         
         // Limpiamos la caja de texto y la memoria del archivo después de usar un comando
         txtNombreArchivo.setText(""); 
         archivoSeleccionadoLocal = null;
     }
-// NUEVO MÉTODO en tu ClienteMainGUI
 private void iniciarDescarga(String nombreDoc, HashMap<Integer, String> mapaUbicaciones) throws IOException {
     // Aquí guardaremos los pedazos conforme vayan llegando
     List<Fragmento> fragmentosRecolectados = new ArrayList<>();
@@ -281,8 +278,7 @@ private void iniciarDescarga(String nombreDoc, HashMap<Integer, String> mapaUbic
     imprimirLog("Iniciando descarga P2P...");
 
     // Recorremos el mapa que nos dio el servidor
-   // ... inicio del método iniciarDescarga ...
-
+ 
     // Recorremos el mapa y pedimos los pedazos
     for (Map.Entry<Integer, String> entrada : mapaUbicaciones.entrySet()) {
         int numeroFragmento = entrada.getKey();
@@ -294,7 +290,7 @@ private void iniciarDescarga(String nombreDoc, HashMap<Integer, String> mapaUbic
             fragmentosRecolectados.add(frag);
         } else {
             imprimirLog("Fallo al obtener el fragmento " + numeroFragmento);
-            return; // Abortamos si falta un pedazo
+            return; 
         }
     } 
     imprimirLog("¡Todos los fragmentos descargados con éxito!");
@@ -305,7 +301,6 @@ private void iniciarDescarga(String nombreDoc, HashMap<Integer, String> mapaUbic
         // 1. Pegamos los pedazos físicamente en el disco duro
         GestorFragmentos.ensamblarArchivo(fragmentosRecolectados, rutaDestino);
         
-        // 2. Le pedimos a Windows que lo abra (solo 1 vez)
         abrirArchivoConSistemaOperativo(rutaDestino);
         
     } catch (IOException e) {
@@ -322,13 +317,12 @@ private void abrirArchivoConSistemaOperativo(String rutaDelArchivo) {
             return;
         }
         
-        // 2. Verificamos si la computadora soporta esta función (el 99% de Windows/Mac lo hacen)
+        // 2. Verificamos si la computadora soporta esta función 
         if (!Desktop.isDesktopSupported()) {
             imprimirLog("Tu sistema operativo no soporta la apertura automática de archivos.");
             return;
         }
-        
-        // 3. ¡La magia! Le pedimos a Windows/Mac que lo abra
+     
         Desktop desktop = Desktop.getDesktop();
         desktop.open(archivoFisico);
         
