@@ -44,7 +44,7 @@ public class ClienteMainGUI extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
 
-        // --- Panel Central (La "Consola") ---
+        // --- Panel Central (Consola) ---
         areaConsola = new JTextArea();
         areaConsola.setEditable(false);
         areaConsola.setBackground(Color.BLACK);
@@ -112,7 +112,7 @@ public class ClienteMainGUI extends JFrame {
                     });
     }
 
-    // NUEVO MÉTODO: Lógica del JFileChooser
+    // Lógica del JFileChooser
     private void abrirBuscadorArchivos() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Selecciona un archivo para compartir");
@@ -233,7 +233,7 @@ public class ClienteMainGUI extends JFrame {
 
                     imprimirLog("¡Mapa recibido! El archivo tiene " + mapaUbicaciones.size() + " fragmentos.");
 
-                    // 3. ¡Iniciamos la Fase 2 de descarga!
+                    // 3. Iniciamos la Fase 2 de descarga
                     iniciarDescarga(nombreDoc, mapaUbicaciones); 
 
                 } catch (IOException e) {
@@ -298,7 +298,7 @@ private void iniciarDescarga(String nombreDoc, HashMap<Integer, String> mapaUbic
     String rutaDestino = "descarga_" + nombreDoc; 
     
     try {
-        // 1. Pegamos los pedazos físicamente en el disco duro
+        // Pegamos los pedazos físicamente en el disco duro
         GestorFragmentos.ensamblarArchivo(fragmentosRecolectados, rutaDestino);
         
         abrirArchivoConSistemaOperativo(rutaDestino);
@@ -340,7 +340,7 @@ private Fragmento pedirFragmentoAVecino(String ipVecino, String nombreDoc, int n
          ObjectOutputStream salidaObj = new ObjectOutputStream(socket.getOutputStream());
          ObjectInputStream entradaObj = new ObjectInputStream(socket.getInputStream())) {
         
-        // 1. Le decimos al vecino "Dame este archivo y este pedazo exacto"
+        // 1. Pedir archivo
         salidaObj.writeUTF("GET:" + nombreDoc + ":" + numSecuencia);
         salidaObj.flush();
         
