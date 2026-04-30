@@ -9,7 +9,7 @@ import java.util.List;
 public class GestorFragmentos {
 
     // Tamaño de cada bloque
-    private static final int TAMANO_MAX_FRAGMENTO = 64 * 1024; 
+    private static final int TAMANO_MAX_FRAGMENTO = 1024 * 1024;
 
     /**
      * Toma un archivo físico y lo convierte en una lista de fragmentos listos para enviarse por red.
