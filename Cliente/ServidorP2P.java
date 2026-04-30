@@ -8,8 +8,7 @@ import java.util.HashMap;
 public class ServidorP2P implements Runnable {
     private final int puertoP2P = 1236;
     
-    // Mantenemos tu HashMap por si otras partes del programa lo necesitan leer,
-    // pero ya no será el medio de almacenamiento principal.
+  
     public static final HashMap<String, Fragmento> misFragmentos = new HashMap<>();
     
     // Nombre de la carpeta donde se guardarán los fragmentos físicamente
