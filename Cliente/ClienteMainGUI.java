@@ -20,7 +20,7 @@ public class ClienteMainGUI extends JFrame {
     private JTextArea areaConsola;
     private JTextField txtNombreArchivo;
     private ConexionServidor servidor;
-    
+    private int miPuertoDinamico;
     // Variable para guardar el archivo real que el usuario seleccionó con la ventana
     private File archivoSeleccionadoLocal = null;
 
@@ -80,18 +80,23 @@ public class ClienteMainGUI extends JFrame {
         // --- Asignar acciones a los botones ---
         btnBuscar.addActionListener(e -> abrirBuscadorArchivos());
         btnCrear.addActionListener(e -> {
-            try {
-                procesarComando("crear");
-            } catch (IOException ex) {
-                System.getLogger(ClienteMainGUI.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-            }
+            new Thread(() -> { // Hilo separado para no trabar la GUI
+                try {
+                    procesarComando("crear");
+                } catch (IOException ex) {
+                    imprimirLog("Error: " + ex.getMessage());
+                }
+            }).start();
         });
+
         btnAbrir.addActionListener(e -> {
-            try {
-                procesarComando("abrir");
-            } catch (IOException ex) {
-                System.getLogger(ClienteMainGUI.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
-            }
+            new Thread(() -> { // Hilo separado para la descarga P2P
+                try {
+                    procesarComando("abrir");
+                } catch (IOException ex) {
+                    imprimirLog("Error: " + ex.getMessage());
+                }
+            }).start();
         });
         btnBorrar.addActionListener(e -> {
             try {
@@ -147,13 +152,15 @@ public class ClienteMainGUI extends JFrame {
 
             ServidorP2P miServidorP2P = new ServidorP2P(servidor);
             Thread hiloP2P = new Thread(miServidorP2P);
+            miPuertoDinamico = miServidorP2P.getPuertoP2P();
             hiloP2P.setDaemon(true);
             hiloP2P.start();
 
             imprimirLog("Conexión establecida con el servidor en: " + ipServidor);
-            
+            imprimirLog("Puerto P2P dinámico asignado: " + miPuertoDinamico);
             // --- NUEVA LÍNEA AQUÍ ---
             // Le decimos al servidor local que lea el disco y reporte lo que tiene
+            servidor.enviarComando(Codes.NEW_CLIENT, String.valueOf(miPuertoDinamico));
             miServidorP2P.reportarInventarioLocal();
             
             imprimirLog("Listo para recibir instrucciones.");
@@ -201,22 +208,64 @@ public class ClienteMainGUI extends JFrame {
                     List<Fragmento> fragmentos = GestorFragmentos.dividirArchivo(archivoLocal, nombreDoc);
                     imprimirLog("El archivo se dividió en " + fragmentos.size() + " fragmentos.");
 
-                    List<String> vecinosDisponibles = new java.util.ArrayList<>(ReceptorBroadcast.vecinos);
-                    
-                    if (vecinosDisponibles.isEmpty()) {
-                        imprimirLog("No hay vecinos. Guardando localmente...");
+                    List<String> todosLosVecinos = new java.util.ArrayList<>(ReceptorBroadcast.vecinos);
+                    HashMap<String, List<String>> maquinasFisicas = new HashMap<>();
+
+                    for (String nodo : todosLosVecinos) {
+                        String ipReal = nodo.split(":")[0];
+                        maquinasFisicas.putIfAbsent(ipReal, new ArrayList<>());
+                        maquinasFisicas.get(ipReal).add(nodo);
+                    }
+
+                    List<String> ipsDisponibles = new ArrayList<>(maquinasFisicas.keySet());
+                    // =====================================================================
+
+                    if (ipsDisponibles.isEmpty()) {
+                        imprimirLog("No hay vecinos externos. Guardando localmente en disco...");
                         for (Fragmento frag : fragmentos) {
-                            enviarFragmentoAVecino("127.0.0.1", frag);
+                            enviarFragmentoAVecino("127.0.0.1:" + miPuertoDinamico, frag);
                         }
                     } else {
-                        imprimirLog("Distribuyendo entre " + vecinosDisponibles.size() + " vecinos...");
+                        imprimirLog("Distribuyendo entre " + ipsDisponibles.size() + " máquinas físicas...");
+
                         for (int i = 0; i < fragmentos.size(); i++) {
                             Fragmento frag = fragmentos.get(i);
-                            String ipDestino = vecinosDisponibles.get(i % vecinosDisponibles.size());
-                            enviarFragmentoAVecino(ipDestino, frag);
+                            
+                            // Elegimos a qué IP física le toca este fragmento
+                            String ipElegida = ipsDisponibles.get(i % ipsDisponibles.size());
+                            
+                            // Obtenemos todos los clientes (hermanos) en esa IP
+                            List<String> hermanosEnEsaIP = maquinasFisicas.get(ipElegida);
+                            boolean fragmentoEntregado = false;
+
+                            // Intentamos entregar el fragmento. Si uno es fantasma, intentamos con el siguiente.
+                            // Intentamos entregar el fragmento.
+                            // USAMOS UN ITERATOR para poder borrar de la lista sin que el ciclo explote
+                            java.util.Iterator<String> iteradorHermanos = hermanosEnEsaIP.iterator();
+                            
+                            while (iteradorHermanos.hasNext()) {
+                                String nodoDestino = iteradorHermanos.next();
+                                
+                                if (enviarFragmentoAVecino(nodoDestino, frag)) {
+                                    fragmentoEntregado = true;
+                                    break; // ¡Se entregó con éxito!
+                                } else {
+                                    // ¡EL TRUCO DE VELOCIDAD! Si falló, lo quitamos de la lista de hermanos
+                                    // Así el siguiente fragmento NO intentará conectarse a este nodo muerto
+                                    iteradorHermanos.remove();
+                                }
+                            }
+
+                            // Si todos los hermanos fallaron (toda la PC se apagó de golpe)
+                            if (!fragmentoEntregado) {
+                                imprimirLog("Alerta: No se pudo entregar a la IP " + ipElegida + ". Guardando localmente como respaldo.");
+                                // Obligatorio usar el puerto dinámico para guardarlo localmente
+                                enviarFragmentoAVecino("127.0.0.1:" + miPuertoDinamico, frag);
+                            }
                         }
                         imprimirLog("Distribución completada.");
                     }
+                    
                 } catch (IOException ex) {
                     imprimirLog("Error al procesar: " + ex.getMessage());
                 }
@@ -341,35 +390,54 @@ private void abrirArchivoConSistemaOperativo(String rutaDelArchivo) {
     }
 }
 // NUEVO MÉTODO para conectarse y pedir un solo pedazo
-private Fragmento pedirFragmentoAVecino(String ipVecino, String nombreDoc, int numSecuencia) {
-    try (Socket socket = new Socket(ipVecino, 1236);
-         ObjectOutputStream salidaObj = new ObjectOutputStream(socket.getOutputStream());
-         ObjectInputStream entradaObj = new ObjectInputStream(socket.getInputStream())) {
+// Cambiamos 'ipVecino' por 'destino' para reflejar que trae IP:Puerto
+    private Fragmento pedirFragmentoAVecino(String destino, String nombreDoc, int numSecuencia) {
         
-        // 1. Le decimos al vecino "Dame este archivo y este pedazo exacto"
-        salidaObj.writeUTF("GET:" + nombreDoc + ":" + numSecuencia);
-        salidaObj.flush();
-        
-        // 2. Nos quedamos esperando a que el vecino nos aviente el objeto Fragmento
-        Fragmento fragmentoRecibido = (Fragmento) entradaObj.readObject();
-        return fragmentoRecibido;
-        
-    } catch (Exception e) {
-        System.err.println("Fallo al pedir fragmento a " + ipVecino + ": " + e.getMessage());
-        return null;
-    }
-}
-    public static void enviarFragmentoAVecino(String ipVecino, Fragmento fragmento) {
-        try (Socket socket = new Socket(ipVecino, 1236);
-            ObjectOutputStream salidaObj = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream entradaObj = new ObjectInputStream(socket.getInputStream())) {
+        // 1. Separamos la IP del puerto
+        String[] partesDestino = destino.split(":");
+        String ipReal = partesDestino[0];
+        int puertoReal = partesDestino.length > 1 ? Integer.parseInt(partesDestino[1]) : 1236;
+
+        try (Socket socket = new Socket(ipReal, puertoReal);
+             ObjectOutputStream salidaObj = new ObjectOutputStream(socket.getOutputStream());
+             ObjectInputStream entradaObj = new ObjectInputStream(socket.getInputStream())) {
             
-            salidaObj.writeUTF("STORE");
-            salidaObj.writeObject(fragmento);
+            salidaObj.writeUTF("GET:" + nombreDoc + ":" + numSecuencia);
             salidaObj.flush();
             
+            Fragmento fragmentoRecibido = (Fragmento) entradaObj.readObject();
+            return fragmentoRecibido;
+            
+        } catch (Exception e) {
+            System.err.println("Fallo al pedir fragmento a " + destino + ": " + e.getMessage());
+            return null;
+        }
+    }
+// Le cambiamos el nombre a la variable de "ipVecino" a "destino" para que sea más claro
+   public static boolean enviarFragmentoAVecino(String destino, Fragmento fragmento) {
+        String[] partesDestino = destino.split(":");
+        String ipReal = partesDestino[0];
+        int puertoReal = partesDestino.length > 1 ? Integer.parseInt(partesDestino[1]) : 1236;
+
+        // 1. Creamos el socket vacío (sin conectarlo de golpe)
+        try (Socket socket = new Socket()) {
+            
+            // 2. Intentamos conectar con un TIMEOUT ESTRICTO de 1500 milisegundos (1.5 segundos)
+            socket.connect(new java.net.InetSocketAddress(ipReal, puertoReal), 1500);
+            
+            try (ObjectOutputStream salidaObj = new ObjectOutputStream(socket.getOutputStream());
+                 ObjectInputStream entradaObj = new ObjectInputStream(socket.getInputStream())) {
+                
+                salidaObj.writeUTF("STORE");
+                salidaObj.writeObject(fragmento);
+                salidaObj.flush();
+                return true; // Éxito
+            }
+            
         } catch (IOException e) {
-            System.err.println("No se pudo enviar el fragmento a la IP: " + ipVecino);
+            System.err.println("[P2P] Nodo muerto o muy lento. Limpiando caché: " + destino);
+            ReceptorBroadcast.vecinos.remove(destino); 
+            return false; // Falló
         }
     }
 

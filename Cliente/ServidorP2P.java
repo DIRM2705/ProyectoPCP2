@@ -6,30 +6,37 @@ import java.nio.file.Files;
 import java.util.HashMap;
 
 public class ServidorP2P implements Runnable {
-    private final int puertoP2P = 1236;
-    
-  
+   // private final int puertoP2P = 1236;
+   private int puertoP2P;
+    private ServerSocket serverSocketP2P; // Lo declaramos global
     public static final HashMap<String, Fragmento> misFragmentos = new HashMap<>();
-    
-    // Nombre de la carpeta donde se guardarán los fragmentos físicamente
+
     private static final String CARPETA_OCULTA = ".fragments";
-    
-    // Necesitamos la conexión al tracker para reportar cuando recibimos algo
+
     private ConexionServidor servidorTracker;
 
-    public ServidorP2P(ConexionServidor servidorTracker) {
+// Modificamos el constructor (Ahora lanza IOException si falla la red)
+    public ServidorP2P(ConexionServidor servidorTracker) throws IOException {
         this.servidorTracker = servidorTracker;
+        this.serverSocketP2P = new ServerSocket(0);
+        this.puertoP2P = this.serverSocketP2P.getLocalPort();
+    }
+    public int getPuertoP2P() {
+        return puertoP2P;
     }
 
     @Override
     public void run() {
-        try (ServerSocket serverP2P = new ServerSocket(puertoP2P)) {
-            System.out.println("Servidor P2P local escuchando en el puerto " + puertoP2P + "...");
+        System.out.println("Servidor P2P local escuchando en el puerto dinámico: " + puertoP2P);
+        try {
             while (true) {
-                Socket clientePedidor = serverP2P.accept();
+                // Ya no creamos el ServerSocket aquí, solo aceptamos conexiones
+                Socket clientePedidor = serverSocketP2P.accept();
                 new Thread(() -> manejarPeticion(clientePedidor)).start();
             }
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) { 
+            e.printStackTrace(); 
+        }
     }
 
     private void manejarPeticion(Socket socket) {
@@ -167,5 +174,27 @@ public class ServidorP2P implements Runnable {
             }
         }
         return null;
+    }
+    // =====================================================================
+    // MÉTODO DE PURGA: Busca y destruye fragmentos locales
+    // =====================================================================
+    public static void purgarFragmentosLocales(String nombreDoc) {
+        File carpeta = new File(CARPETA_OCULTA);
+        if (!carpeta.exists()) return;
+
+        File[] archivos = carpeta.listFiles();
+        if (archivos != null) {
+            for (File file : archivos) {
+                // Buscamos cualquier archivo que empiece con el nombre del documento
+                if (file.getName().startsWith(nombreDoc + "_parte_")) {
+                    if (file.delete()) {
+                        System.out.println("[Purga] Basura eliminada del disco: " + file.getName());
+                    }
+                }
+            }
+        }
+        
+        // También limpiamos la memoria RAM (El HashMap) para que no haya inconsistencias
+        misFragmentos.entrySet().removeIf(entry -> entry.getKey().startsWith(nombreDoc + "_parte_"));
     }
 }
