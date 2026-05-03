@@ -86,6 +86,7 @@ public class TablaDocs implements Serializable {
     }
 
     // Método para que el servidor empaquete el "mapa" y se lo envíe al cliente que lo pide
+   // Método para que el servidor empaquete el "mapa" y se lo envíe al cliente que lo pide
     public String obtenerMapaUbicacionesComoString(String docName) throws IllegalStateException {
         if (!existeDoc(docName)) return "";
 
@@ -95,17 +96,77 @@ public class TablaDocs implements Serializable {
 
         HashMap<Integer, String> ubicaciones = doc.getUbicaciones();
 
-        // Vamos a crear un string fácil de leer para el cliente, formato: "0:192.168.1.5;1:192.168.1.6;2:192.168.1.5"
+        // Vamos a crear un string fácil de leer para el cliente, formato: "0:192.168.1.5:1236;1:192.168.1.6:51422;"
         StringBuilder mapaStr = new StringBuilder();
         mapaStr.append(doc.getTotalFragmentos()).append("|"); // Ponemos el total al inicio
 
         for (Integer frag : ubicaciones.keySet()) {
-            mapaStr.append(frag).append(":").append(ubicaciones.get(frag)).append(";");
+            String ubicacionOriginal = ubicaciones.get(frag);
+            String ubicacionViva = obtenerDelegadoVivo(ubicacionOriginal);
+
+            // Si encontró un delegado vivo (o el original sigue vivo), lo agrega al mapa
+            if (ubicacionViva != null) {
+                mapaStr.append(frag).append(":").append(ubicacionViva).append(";");
+                
+                // Opcional y recomendado: Actualizar la tabla interna para futuras peticiones
+                if (!ubicacionViva.equals(ubicacionOriginal)) {
+                    ubicaciones.put(frag, ubicacionViva);
+                }
+            } else {
+                 // Si devuelve null, significa que ni el original ni ningún hermano en esa IP está vivo.
+                 System.out.println("[ALERTA] El fragmento " + frag + " del doc '" + docName + "' parece estar en una PC completamente desconectada.");
+                 // Puedes omitirlo, y el cliente verá que le faltan fragmentos, o enviar una marca de error.
+                 // Por ahora, simplemente no lo agregamos, lo que causará que el mapa esté incompleto (el cliente ya tiene una validación para esto).
+            }
         }
 
         doc.eliminar.release(); //Libera un permiso
 
         return mapaStr.toString();
+    }
+
+    // =====================================================================
+    // LÓGICA DE DELEGACIÓN: Buscar un nodo vivo en la misma máquina física
+    // =====================================================================
+// =====================================================================
+    // LÓGICA DE DELEGACIÓN: Buscar un nodo vivo (CON DEPURACIÓN EXTREMA)
+    // =====================================================================
+    private String obtenerDelegadoVivo(String ipPuertoOriginal) {
+        System.out.println("\n[Tracker-Debug] === EVALUANDO DELEGACIÓN ===");
+        System.out.println("[Tracker-Debug] Buscando reemplazo para: '" + ipPuertoOriginal + "'");
+        System.out.println("[Tracker-Debug] Clientes vivos en la red: " + Main.clientesConectados);
+
+        if (ipPuertoOriginal == null || ipPuertoOriginal.trim().isEmpty()) {
+             System.out.println("[Tracker-Debug] Error: La ubicación original es nula o vacía.");
+             return null;
+        }
+
+        // Limpiamos la cadena por si se coló un espacio o salto de línea
+        String ipPuertoLimpio = ipPuertoOriginal.trim();
+
+        // 1. Verificamos si la ruta original sigue viva
+        if (Main.clientesConectados.contains(ipPuertoLimpio)) {
+            System.out.println("[Tracker-Debug] Resultado: El dueño original sigue vivo. ¡Ruta directa!");
+            return ipPuertoLimpio;
+        }
+
+        // 2. Extraemos la IP física
+        String ipFisica = ipPuertoLimpio.split(":")[0];
+        System.out.println("[Tracker-Debug] Dueño original caído. Buscando hermanos con la IP: '" + ipFisica + "'");
+
+        // 3. Iteramos y comparamos uno por uno imprimiendo el proceso
+        for (String nodoActivo : Main.clientesConectados) {
+            String nodoActivoLimpio = nodoActivo.trim();
+            System.out.println("   -> ¿'" + nodoActivoLimpio + "' empieza con '" + ipFisica + ":'?");
+
+            if (nodoActivoLimpio.startsWith(ipFisica + ":")) {
+                System.out.println("[Tracker-Debug] Resultado: ¡Éxito! Hermano encontrado -> " + nodoActivoLimpio);
+                return nodoActivoLimpio;
+            }
+        }
+
+        System.out.println("[Tracker-Debug] Resultado: Fracaso. Ningún cliente conectado coincide con la IP física " + ipFisica);
+        return null;
     }
 
     private void guardarTablaDocs() throws IOException {

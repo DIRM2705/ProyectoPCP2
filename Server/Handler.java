@@ -12,46 +12,30 @@ public class Handler implements Runnable {
     private final Socket client;
     private final BufferedReader reader;
     private final PrintWriter writter;
-    private final String origen; //El número de cliente que envió el mensaje, se asigna a partir de la dirección IP del cliente
+    private final String ipFisica; // Solo la IP (ej. 192.168.1.69)
+    private String identidadUnica; // Será IP:Puerto (ej. 192.168.1.69:51422)
 
     public Handler(Socket client) throws IOException {
         this.client = client;
-        reader = new BufferedReader(
-                new InputStreamReader(client.getInputStream()));
+        reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
         writter = new PrintWriter(client.getOutputStream(), true);
-        origen = client.getInetAddress().getHostAddress();
+        
+        this.ipFisica = client.getInetAddress().getHostAddress();
+        // Le damos un valor por defecto temporal por si se desconecta antes de enviar su puerto
+        this.identidadUnica = this.ipFisica; 
     }
 
-public void announce() {
-        try {
-            // 1. Lo guardamos en la memoria central del Servidor
-            Main.clientesConectados.add(origen);
-            
-            // 2. Recorremos la lista y anunciamos a TODOS.
-            // Así, el nuevo se entera de los viejos, y los viejos se enteran del nuevo.
-            for (String ipRegistrada : Main.clientesConectados) {
-                broadcastMessaging.send(Codes.NEW_CLIENT, ipRegistrada.getBytes());
-            }
-            
-            System.out.println("Se ha actualizado la red. Clientes totales: " + Main.clientesConectados.size());
-            
-        } catch (IOException | IllegalArgumentException e) {
-            System.out.println("Error al anunciar clientes: " + e.getMessage());
-            try {
-                client.close();
-            } catch (IOException ex) {
-                System.out.println("Error al cerrar la conexión: " + ex.getMessage());
-            }
-        }
-    }
+    // Nota: Eliminamos el método public void announce() porque ahora esa lógica 
+    // debe ocurrir obligatoriamente DESPUÉS de recibir el puerto dinámico (en el switch).
 
     public void run() {
         while (true) {
             String message = receive();
             if(message.equals("FinHilo"))
             {
-                System.out.println("El cliente " + origen + " se ha desconectado.");
-                clientesConectados.remove(origen);
+                // Usamos identidadUnica para borrarlo correctamente con todo y su puerto
+                System.out.println("El cliente " + identidadUnica + " se ha desconectado.");
+                clientesConectados.remove(identidadUnica);
                 try {
                     client.close();
                 } catch (IOException e) {
@@ -63,8 +47,10 @@ public void announce() {
                 System.out.println("Mensaje recibido con formato incorrecto");
                 return;
             }
+            
             int code = message.getBytes()[0]; //El primer byte del mensaje es el código de la operación
-            String doc = message.substring(1); //El resto del mensaje es el nombre del documento
+            String doc = message.substring(1); //El resto del mensaje es el payload (documento o puerto)
+            
             try {
                 processMessage(code, doc);
             } catch (Exception e) {
@@ -80,7 +66,7 @@ public void announce() {
             return Objects.requireNonNullElse(message, "");
         } catch (IOException e) {
             if(Objects.equals(e.getMessage(), "Connection reset"))
-                return "FinHilo"; // Indicamos que el cliente se ha desconectado abruptamente
+                return "FinHilo"; 
             else
                 System.out.println("Error al recibir mensaje del cliente: " + e.getMessage());
             return "";
@@ -89,41 +75,64 @@ public void announce() {
 
     private void processMessage(int code, String doc) throws IllegalArgumentException, IOException {
         switch (code) {
+            // =================================================================
+            // NUEVO CASE: Aquí recibimos el puerto y completamos la identidad
+            // =================================================================
+            case Codes.NEW_CLIENT:
+                // El "doc" en este caso trae el puerto (ej. "51422")
+                this.identidadUnica = this.ipFisica + ":" + doc.trim();
+                System.out.println("Cliente registrado exitosamente con puerto dinámico: " + identidadUnica);
+
+                // 1. Lo guardamos en la memoria central del Servidor (Tracker)
+                Main.clientesConectados.add(identidadUnica);
+                
+                // 2. Recorremos la lista y anunciamos a TODOS usando Broadcast UDP.
+                for (String ipRegistrada : Main.clientesConectados) {
+                    broadcastMessaging.send(Codes.NEW_CLIENT, ipRegistrada.getBytes());
+                }
+                System.out.println("Se ha actualizado la red. Clientes totales: " + Main.clientesConectados.size());
+                break;
+
             case Codes.NEW_DOC:
                 System.out.println("Mensaje recibido para crear un nuevo documento: " + doc);
                 if(tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("Ya existe un documento con ese nombre");
                 tablaDocs.insertarDoc(doc);
                 break;
-            case Codes.DELETE_DOC:
+                
+           case Codes.DELETE_DOC:
                 System.out.println("Mensaje recibido para eliminar un documento: " + doc);
                 if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe un documento con ese nombre");
-                tablaDocs.eliminarDoc(doc);
+                
+                tablaDocs.eliminarDoc(doc); // Lo borra del Tracker
+                Main.broadcastMessaging.send(Codes.PURGE_FILE, doc.getBytes());
+                System.out.println("Orden de purga enviada a la red para el archivo: " + doc);
                 break;
+                
             case Codes.REPORT_CHUNK:
-                // El formato que recibiremos del cliente será: "nombreDoc:numFragmento"
-                // Ejemplo: "mi_archivo.txt:3"
                 String[] partesReporte = doc.split(":");
                 if(partesReporte.length == 2) {
                     String nombreDocumento = partesReporte[0];
                     int numFragmento = Integer.parseInt(partesReporte[1]);
-                    tablaDocs.registrarFragmento(nombreDocumento, numFragmento, origen); // "origen" es la IP del cliente (ya la tienes en la clase)
+                    
+                    // ¡VITAL! Aquí cambiamos "origen" por "identidadUnica"
+                    tablaDocs.registrarFragmento(nombreDocumento, numFragmento, identidadUnica); 
                 }
                 break;
+                
             case Codes.REQUEST_LOCATIONS:
-                // El cliente nos pide dónde están los fragmentos de un documento
-                System.out.println("Cliente " + origen + " solicitó ubicaciones del doc: " + doc);
+                System.out.println("Cliente " + identidadUnica + " solicitó ubicaciones del doc: " + doc);
                 if(!tablaDocs.existeDoc(doc)) throw new IllegalArgumentException("No existe el documento");
                 
                 String mapa = tablaDocs.obtenerMapaUbicacionesComoString(doc);
-                
-                // Le respondemos SOLO a este cliente (usamos su writter TCP, no un broadcast UDP)
                 writter.println(((char)Codes.LOCATIONS_RESPONSE) + mapa);
                 break;
-                case Codes.INVENTORY: // LIST_DOCS
-                    System.out.println("Cliente " + origen + " solicitó la lista de documentos.");
-                    String listaArchivos = tablaDocs.obtenerListaDocumentos();
-                    writter.println(listaArchivos); // Le enviamos la lista en texto plano
-                 break;
+                
+            case Codes.INVENTORY: // LIST_DOCS
+                System.out.println("Cliente " + identidadUnica + " solicitó la lista de documentos.");
+                String listaArchivos = tablaDocs.obtenerListaDocumentos();
+                writter.println(listaArchivos); 
+                break;
+                
             default:
                 System.out.println("Código de mensaje desconocido: " + code);
                 break;
