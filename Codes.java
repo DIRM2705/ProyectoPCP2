@@ -21,5 +21,6 @@ public class Codes
     public static final int LOCATIONS_RESPONSE = 9; 
     // Comando para el inventario en el servidor 
     public static final int INVENTORY =11;
+    public static final int PURGE_FILE = 15; // O el número que tengas libre
 }
 
