@@ -22,11 +22,16 @@ public class ConnectionManager
             while (true)
             {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("Cliente conectado: " + clientSocket.getInetAddress());
+                
+                // Extraemos la IP y el Puerto de la conexión entrante
+                String ipCliente = clientSocket.getInetAddress().getHostAddress();
+                int puertoConexion = clientSocket.getPort();
+                
+                System.out.println("[Tracker] Conexión TCP entrante desde: " + ipCliente + ":" + puertoConexion);
+                
                 connections++;
                 tablaDocs.incrementarSemaforos();
                 Handler handler = new Handler(clientSocket);
-                handler.announce();
                 new Thread(handler).start();
             }
         }
