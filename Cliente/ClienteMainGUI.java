@@ -263,6 +263,7 @@ public class ClienteMainGUI extends JFrame {
                                 enviarFragmentoAVecino("127.0.0.1:" + miPuertoDinamico, frag);
                             }
                         }
+                        servidor.enviarComando(20, nombreDoc); // Comando para avisar que ya se subió el último fragmento
                         imprimirLog("Distribución completada.");
                     }
                     
