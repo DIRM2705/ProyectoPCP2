@@ -22,5 +22,6 @@ public class Codes
     // Comando para el inventario en el servidor 
     public static final int INVENTORY =11;
     public static final int PURGE_FILE = 15; // O el número que tengas libre
+    public static final int LAST_CHUNK = 20; // Para que el cliente avise que tiene el último fragmento
 }
 

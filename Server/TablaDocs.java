@@ -43,9 +43,10 @@ public class TablaDocs implements Serializable {
         }
     }
 
-    public synchronized void insertarDoc(String titulo) throws IOException {
+    public synchronized void insertarDoc(String titulo) throws IOException, InterruptedException {
         Documento doc = new Documento("" + (docCounter++)); //Crea un nuevo documento con un ID único
         tabla.put(titulo, doc); //Agrega el documento a la tabla con su lista de particiones
+        doc.eliminar.acquire();
         //Anuncia a los clientes que se ha creado un nuevo documento
         broadcastMessaging.send(Codes.NEW_DOC, doc.getID());
     }
@@ -62,18 +63,23 @@ public class TablaDocs implements Serializable {
         guardarTablaDocs();
     }
 
+    public void registrarUltimoFragmento(String docName, int numFragmento, String ipCliente) throws IllegalStateException, IOException {
+        if (existeDoc(docName)) {
+            Documento doc = tabla.get(docName);
+            doc.setTotalFragmentos(numFragmento);
+            doc.eliminar.release();
+            doc.registrarUbicacion(numFragmento, ipCliente);
+            System.out.println("Registrado: Fragmento " + numFragmento + " del doc '" + docName + "' está en IP " + ipCliente);
+            guardarTablaDocs();
+        }
+    }
+
     // Método para que un cliente reporte que tiene un pedazo
     public synchronized void registrarFragmento(String docName, int numFragmento, String ipCliente) {
         if (existeDoc(docName)) {
             Documento doc = tabla.get(docName);
             doc.registrarUbicacion(numFragmento, ipCliente);
             System.out.println("Registrado: Fragmento " + numFragmento + " del doc '" + docName + "' está en IP " + ipCliente);
-            try {
-                guardarTablaDocs();
-            }
-            catch (IOException e) {
-                System.out.println("Error al guardar tablaDocs después de registrar fragmento: " + e.getMessage());
-            }
         }
     }
 

@@ -73,7 +73,7 @@ public class Handler implements Runnable {
         }
     }
 
-    private void processMessage(int code, String doc) throws IllegalArgumentException, IOException {
+    private void processMessage(int code, String doc) throws IllegalArgumentException, InterruptedException, IOException {
         switch (code) {
             // =================================================================
             // NUEVO CASE: Aquí recibimos el puerto y completamos la identidad
@@ -132,6 +132,14 @@ public class Handler implements Runnable {
                 String listaArchivos = tablaDocs.obtenerListaDocumentos();
                 writter.println(listaArchivos); 
                 break;
+            case Codes.LAST_CHUNK:
+                System.out.println("Cliente " + identidadUnica + " reportó que tiene el último fragmento del doc: " + doc);
+                String[] partesLast = doc.split(":");
+                if(partesLast.length == 2) {
+                    String nombreDocumento = partesLast[0];
+                    int numFragmento = Integer.parseInt(partesLast[1]);
+                    tablaDocs.registrarUltimoFragmento(nombreDocumento, numFragmento, identidadUnica);
+                }
                 
             default:
                 System.out.println("Código de mensaje desconocido: " + code);
