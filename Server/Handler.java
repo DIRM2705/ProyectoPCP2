@@ -133,14 +133,9 @@ public class Handler implements Runnable {
                 writter.println(listaArchivos); 
                 break;
             case Codes.LAST_CHUNK:
-                System.out.println("Cliente " + identidadUnica + " reportó que tiene el último fragmento del doc: " + doc);
-                String[] partesLast = doc.split(":");
-                if(partesLast.length == 2) {
-                    String nombreDocumento = partesLast[0];
-                    int numFragmento = Integer.parseInt(partesLast[1]);
-                    tablaDocs.registrarUltimoFragmento(nombreDocumento, numFragmento, identidadUnica);
-                }
-                
+                System.out.println("Cliente " + identidadUnica + " reportó que envió el último fragmento del doc: " + doc);
+                tablaDocs.registrarUltimoFragmento(doc);
+                break;
             default:
                 System.out.println("Código de mensaje desconocido: " + code);
                 break;

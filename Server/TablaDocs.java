@@ -63,13 +63,11 @@ public class TablaDocs implements Serializable {
         guardarTablaDocs();
     }
 
-    public void registrarUltimoFragmento(String docName, int numFragmento, String ipCliente) throws IllegalStateException, IOException {
+    public void registrarUltimoFragmento(String docName) throws IllegalStateException, IOException {
         if (existeDoc(docName)) {
             Documento doc = tabla.get(docName);
-            doc.setTotalFragmentos(numFragmento);
             doc.eliminar.release();
-            doc.registrarUbicacion(numFragmento, ipCliente);
-            System.out.println("Registrado: Fragmento " + numFragmento + " del doc '" + docName + "' está en IP " + ipCliente);
+            System.out.println("Se terminó de subir el documento '" + docName + "'. Se liberó un permiso en su semáforo de eliminación.");
             guardarTablaDocs();
         }
     }
