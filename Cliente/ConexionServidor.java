@@ -75,10 +75,6 @@ public class ConexionServidor {
             for (String par : pares) {
                 if (par.trim().isEmpty()) continue; 
                 
-                // =========================================================
-                // CORRECCIÓN AQUÍ: split(":", 2) corta SOLO el primer ":"
-                // Dejando partes[0] = "0" y partes[1] = "192.168.1.69:63182"
-                // =========================================================
                 String[] partes = par.split(":", 2); 
                 
                 if (partes.length == 2) {
