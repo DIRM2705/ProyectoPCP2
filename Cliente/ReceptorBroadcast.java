@@ -57,9 +57,6 @@ public class ReceptorBroadcast implements Runnable {
                 System.out.println("\n[Alerta Global] Nuevo cliente conectado desde IP: " + datos);
                 break;
              case Codes.PURGE_FILE:
-                // =========================================================
-                // CORRECCIÓN: Simplemente usamos "datos", que ya trae el nombre del archivo
-                // =========================================================
                 String archivoABorrar = datos.trim();
                 System.out.println("[Alerta Global] Orden de purga recibida. Destruyendo fragmentos de: " + archivoABorrar);
                 
