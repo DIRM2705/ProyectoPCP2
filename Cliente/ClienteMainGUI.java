@@ -63,7 +63,6 @@ public class ClienteMainGUI extends JFrame {
         txtNombreArchivo = new JTextField(15);
         panelControles.add(txtNombreArchivo);
 
-        // NUEVO BOTÓN: Para abrir el JFileChooser
         JButton btnBuscar = new JButton("Examinar...");
         panelControles.add(btnBuscar);
 
@@ -117,7 +116,6 @@ public class ClienteMainGUI extends JFrame {
                     });
     }
 
-    // NUEVO MÉTODO: Lógica del JFileChooser
     private void abrirBuscadorArchivos() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Selecciona un archivo para compartir");
@@ -158,8 +156,7 @@ public class ClienteMainGUI extends JFrame {
 
             imprimirLog("Conexión establecida con el servidor en: " + ipServidor);
             imprimirLog("Puerto P2P dinámico asignado: " + miPuertoDinamico);
-            // --- NUEVA LÍNEA AQUÍ ---
-            // Le decimos al servidor local que lea el disco y reporte lo que tiene
+            
             servidor.enviarComando(Codes.NEW_CLIENT, String.valueOf(miPuertoDinamico));
             miServidorP2P.reportarInventarioLocal();
             
@@ -189,11 +186,9 @@ public class ClienteMainGUI extends JFrame {
                 imprimirLog("> Ejecutando comando CREAR para: " + nombreDoc);
                 
                 File archivoLocal;
-                // Verificamos si el usuario usó el botón de "Examinar" y el nombre coincide
                 if (archivoSeleccionadoLocal != null && archivoSeleccionadoLocal.getName().equals(nombreDoc)) {
                     archivoLocal = archivoSeleccionadoLocal;
                 } else {
-                    // Si el usuario lo escribió a mano, lo busca en la carpeta por defecto
                     archivoLocal = new File(nombreDoc);
                 }
 
@@ -218,7 +213,6 @@ public class ClienteMainGUI extends JFrame {
                     }
 
                     List<String> ipsDisponibles = new ArrayList<>(maquinasFisicas.keySet());
-                    // =====================================================================
 
                     if (ipsDisponibles.isEmpty()) {
                         imprimirLog("No hay vecinos externos. Guardando localmente en disco...");
@@ -234,7 +228,7 @@ public class ClienteMainGUI extends JFrame {
                             // Elegimos a qué IP física le toca este fragmento
                             String ipElegida = ipsDisponibles.get(i % ipsDisponibles.size());
                             
-                            // Obtenemos todos los clientes (hermanos) en esa IP
+                            // Obtenemos todos los clientes en esa IP
                             List<String> hermanosEnEsaIP = maquinasFisicas.get(ipElegida);
                             boolean fragmentoEntregado = false;
 
@@ -248,9 +242,9 @@ public class ClienteMainGUI extends JFrame {
                                 
                                 if (enviarFragmentoAVecino(nodoDestino, frag)) {
                                     fragmentoEntregado = true;
-                                    break; // ¡Se entregó con éxito!
+                                    break; // Se entregó con éxito
                                 } else {
-                                    // ¡EL TRUCO DE VELOCIDAD! Si falló, lo quitamos de la lista de hermanos
+                                    //Si falló, lo quitamos de la lista de hermanos
                                     // Así el siguiente fragmento NO intentará conectarse a este nodo muerto
                                     iteradorHermanos.remove();
                                 }
@@ -259,7 +253,6 @@ public class ClienteMainGUI extends JFrame {
                             // Si todos los hermanos fallaron (toda la PC se apagó de golpe)
                             if (!fragmentoEntregado) {
                                 imprimirLog("Alerta: No se pudo entregar a la IP " + ipElegida + ". Guardando localmente como respaldo.");
-                                // Obligatorio usar el puerto dinámico para guardarlo localmente
                                 enviarFragmentoAVecino("127.0.0.1:" + miPuertoDinamico, frag);
                             }
                         }
@@ -289,7 +282,7 @@ public class ClienteMainGUI extends JFrame {
 
                     imprimirLog("¡Mapa recibido! El archivo tiene " + mapaUbicaciones.size() + " fragmentos.");
 
-                    // 3. ¡Iniciamos la Fase 2 de descarga!
+                    // 3. Iniciamos la Fase 2 de descarga
                     iniciarDescarga(nombreDoc, mapaUbicaciones); 
 
                 } catch (IOException e) {
@@ -354,7 +347,7 @@ private void iniciarDescarga(String nombreDoc, HashMap<Integer, String> mapaUbic
     String rutaDestino = "descarga_" + nombreDoc; 
     
     try {
-        // 1. Pegamos los pedazos físicamente en el disco duro
+        // Pegamos los pedazos físicamente en el disco duro
         GestorFragmentos.ensamblarArchivo(fragmentosRecolectados, rutaDestino);
         
         abrirArchivoConSistemaOperativo(rutaDestino);
@@ -390,11 +383,8 @@ private void abrirArchivoConSistemaOperativo(String rutaDelArchivo) {
         imprimirLog("El archivo no existe o la ruta es inválida.");
     }
 }
-// NUEVO MÉTODO para conectarse y pedir un solo pedazo
-// Cambiamos 'ipVecino' por 'destino' para reflejar que trae IP:Puerto
     private Fragmento pedirFragmentoAVecino(String destino, String nombreDoc, int numSecuencia) {
         
-        // 1. Separamos la IP del puerto
         String[] partesDestino = destino.split(":");
         String ipReal = partesDestino[0];
         int puertoReal = partesDestino.length > 1 ? Integer.parseInt(partesDestino[1]) : 1236;
@@ -414,7 +404,6 @@ private void abrirArchivoConSistemaOperativo(String rutaDelArchivo) {
             return null;
         }
     }
-// Le cambiamos el nombre a la variable de "ipVecino" a "destino" para que sea más claro
    public static boolean enviarFragmentoAVecino(String destino, Fragmento fragmento) {
         String[] partesDestino = destino.split(":");
         String ipReal = partesDestino[0];
