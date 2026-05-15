@@ -25,8 +25,6 @@ public class Handler implements Runnable {
         this.identidadUnica = this.ipFisica; 
     }
 
-    // Nota: Eliminamos el método public void announce() porque ahora esa lógica 
-    // debe ocurrir obligatoriamente DESPUÉS de recibir el puerto dinámico (en el switch).
 
     public void run() {
         while (true) {
@@ -75,9 +73,6 @@ public class Handler implements Runnable {
 
     private void processMessage(int code, String doc) throws IllegalArgumentException, InterruptedException, IOException {
         switch (code) {
-            // =================================================================
-            // NUEVO CASE: Aquí recibimos el puerto y completamos la identidad
-            // =================================================================
             case Codes.NEW_CLIENT:
                 // El "doc" en este caso trae el puerto (ej. "51422")
                 this.identidadUnica = this.ipFisica + ":" + doc.trim();
@@ -86,7 +81,7 @@ public class Handler implements Runnable {
                 // 1. Lo guardamos en la memoria central del Servidor (Tracker)
                 Main.clientesConectados.add(identidadUnica);
                 
-                // 2. Recorremos la lista y anunciamos a TODOS usando Broadcast UDP.
+                // 2. Recorremos la lista y anunciamos a todos usando Broadcast UDP.
                 for (String ipRegistrada : Main.clientesConectados) {
                     broadcastMessaging.send(Codes.NEW_CLIENT, ipRegistrada.getBytes());
                 }
@@ -113,8 +108,6 @@ public class Handler implements Runnable {
                 if(partesReporte.length == 2) {
                     String nombreDocumento = partesReporte[0];
                     int numFragmento = Integer.parseInt(partesReporte[1]);
-                    
-                    // ¡VITAL! Aquí cambiamos "origen" por "identidadUnica"
                     tablaDocs.registrarFragmento(nombreDocumento, numFragmento, identidadUnica); 
                 }
                 break;
