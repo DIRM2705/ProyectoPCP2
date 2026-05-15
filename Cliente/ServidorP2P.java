@@ -30,7 +30,7 @@ public class ServidorP2P implements Runnable {
         System.out.println("Servidor P2P local escuchando en el puerto dinámico: " + puertoP2P);
         try {
             while (true) {
-                // Ya no creamos el ServerSocket aquí, solo aceptamos conexiones
+                //Aceptamos conexiones
                 Socket clientePedidor = serverSocketP2P.accept();
                 new Thread(() -> manejarPeticion(clientePedidor)).start();
             }
@@ -54,7 +54,7 @@ public class ServidorP2P implements Runnable {
                 int numSecuencia = Integer.parseInt(partes[2]);
                 String clave = nombreDoc + ":" + numSecuencia;
                 
-                // 1. En lugar de buscar en el HashMap, LEEMOS DIRECTAMENTE DEL DISCO
+                // En lugar de buscar en el HashMap leemos directamente de disco
                 Fragmento fragSolicitado = leerDeDisco(nombreDoc, numSecuencia);
                 
                 if (fragSolicitado != null) {
@@ -77,7 +77,7 @@ public class ServidorP2P implements Runnable {
                 misFragmentos.put(clave, fragNuevo);
                 System.out.println("\n[P2P] Fragmento " + clave + " recibido y guardado en DISCO.");
                 
-                // 3. ¡EL REPORTE AUTOMÁTICO! Le avisamos al servidor central
+                // 3. Le avisamos al servidor central
                 servidorTracker.reportarFragmento(fragNuevo.getIdDocumento(), fragNuevo.getNumeroSecuencia());
             }
             
@@ -85,9 +85,7 @@ public class ServidorP2P implements Runnable {
             System.err.println("Error en comunicación P2P: " + e.getMessage());
         }
     }
-    // =========================================================================
-    // MÉTODO NUEVO: INVENTARIO AL ARRANCAR
-    // =========================================================================
+   
     public void reportarInventarioLocal() {
         File directorio = new File(CARPETA_OCULTA);
         
@@ -120,7 +118,6 @@ public class ServidorP2P implements Runnable {
                     String idDocumento = partes[0];
                     int numSecuencia = Integer.parseInt(partes[1]);
 
-                    // ¡Reutilizamos tu método para avisarle al servidor!
                     servidorTracker.reportarFragmento(idDocumento, numSecuencia);
                     System.out.println(" -> Reportado: " + idDocumento + " (Parte " + numSecuencia + ")");
                     
@@ -146,7 +143,6 @@ public class ServidorP2P implements Runnable {
                 // Ocultar en Windows
                 Files.setAttribute(directorio.toPath(), "dos:hidden", true);
             } catch (Exception e) {
-                // Si es Linux/Mac fallará silenciosamente, pero el "." inicial ya la ocultó
             }
         }
 
