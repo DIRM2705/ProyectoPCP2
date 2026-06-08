@@ -16,12 +16,15 @@ Finalmente, nótese que el servidor debería ser capaz de procesar las peticione
 ## Diseño del algoritmo
 El algoritmo está dividido en 2 partes, los clientes y los servidores.
 El servidor tiene un algoritmo que está escuchando conexiones constantemente y resolviendo las peticiones de manera asíncrona. Las instrucciones se pueden ver en el siguiente diagrama:
+
 ![Diagrama del algoritmo del servidor](.Diagramas/servidor.png)
 
 En resumen, cada que un cliente se conecta, el servidor crea un proceso ligero en paralelo que está atento a recibir peticiones. Cada petición, tiene un código que permite identificarla seguida de una cadena de argumentos. Con base en el identificador, el servidor crea la lista de fragmentos, la recupera o la borra y envía al cliente una respuesta que puede contener un error o puede contener un mensaje de éxito.
 Al cerrarse la conexión, se cierra este proceso en paralelo. Además, las listas de fragmentos que requieran del nodo desconectado enviarán error por no poder enviar los fragmentos.
 El siguiente diagrama describe el algoritmo desde la lógica del cliente:
+
 ![Diagrama del algoritmo del cliente](.Diagramas/cliente.png)
+
 El cliente establece conexión con el servidor central y activa la escucha de mensajes en broadcast para descubrir otros nodos vecinos en la red.
 Para subir un archivo, este se divide en fragmentos que se distribuyen por TCP entre los vecinos; finalmente, se informa al servidor central sobre la ubicación de cada pedazo.
 Cuando un cliente abre y descarga un archivo solicita al servidor un mapa de ubicaciones, descarga los fragmentos directamente de los nodos poseedores y utiliza el Gestor de Fragmentos para reconstruir el archivo original.
@@ -29,6 +32,7 @@ Permite solicitar el inventario global de archivos disponibles en la red o dar d
 
 ## Topología
 Para la implementación se consideró la siguiente topología de red donde todos los nodos están interconectados entre sí y conectados a un servidor. 
+
 ![Topología de red](.Diagramas/Topologia.png)
 
 ## Gestión de recursos
