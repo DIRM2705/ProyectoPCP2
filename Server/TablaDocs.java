@@ -129,12 +129,6 @@ public class TablaDocs implements Serializable {
         return mapaStr.toString();
     }
 
-    // =====================================================================
-    // LÓGICA DE DELEGACIÓN: Buscar un nodo vivo en la misma máquina física
-    // =====================================================================
-// =====================================================================
-    // LÓGICA DE DELEGACIÓN: Buscar un nodo vivo (CON DEPURACIÓN EXTREMA)
-    // =====================================================================
     private String obtenerDelegadoVivo(String ipPuertoOriginal) {
         System.out.println("\n[Tracker-Debug] === EVALUANDO DELEGACIÓN ===");
         System.out.println("[Tracker-Debug] Buscando reemplazo para: '" + ipPuertoOriginal + "'");
